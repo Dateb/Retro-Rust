@@ -3,16 +3,13 @@ mod gamedata;
 mod gamestate;
 
 use std::path::Path;
-use burn::tensor::{Float, Tensor, TensorData};
-use burn::backend::Wgpu;
-
-type Backend = Wgpu;
+use burn::prelude::Backend;
 
 pub struct RetroEnv {
     emu: emulator::RustRetroEmulator,
     data: gamedata::RustRetroGameData,
     valid_action_keys: Vec<i32>,
-    frame_skip: usize
+    frame_skip: usize,
 }
 
 impl RetroEnv {
@@ -40,21 +37,21 @@ impl RetroEnv {
     }
 
 
-    pub fn reset(&self) -> Tensor<Wgpu, 3> {
+    pub fn reset(&self) -> Vec<f32> {
         let episode_reward = self.data.total_reward();
         self.emu.set_start_state();
         self.data.reset();
         self.data.update_ram();
         self.emu.step();
 
-        self.screen_to_tensor()
+        self.get_screen_buffer()
     }
 
     pub fn valid_action_keys(&self) -> Vec<i32> {
         self.data.get_valid_action_keys()
     }
 
-    pub fn step(&self, action_index: usize) -> (Tensor<Wgpu, 3>, f32, bool) {
+    pub fn step(&self, action_index: usize) -> (Vec<f32>, f32, bool) {
         let mut action = self.valid_action_keys[action_index] as usize;
         let button_mask = RetroEnv::action_to_button_mask(action, 12);
         self.emu.set_button_mask(button_mask.as_slice(), 0);
@@ -63,7 +60,7 @@ impl RetroEnv {
             self.data.update_ram();
         }
 
-        (self.screen_to_tensor(), self.data.current_reward(), self.is_done())
+        (self.get_screen_buffer(), self.data.current_reward(), self.is_done())
     }
 
     pub fn action_to_button_mask(mut action: usize, n: usize) -> Vec<u8> {
@@ -83,21 +80,16 @@ impl RetroEnv {
         self.data.is_done()
     }
 
-    fn screen_to_tensor(&self) -> Tensor<Wgpu, 3> {
+    fn get_screen_buffer(&self) -> Vec<f32> {
         let (buffer, w, h) = self
             .emu
             .get_screen()
             .expect("Screen not available");
 
-        let device = Default::default();
-
         // Convert u8 -> f32 and normalize
-        let buffer_f64: Vec<f64> = buffer.iter().map(|&x| x as f64 / 255.0).collect();
+        let buffer_f32: Vec<f32> = buffer.iter().map(|&x| x as f32 / 255.0).collect();
 
-        let tensor_data = TensorData::new(buffer_f64, [w as usize, h as usize, 3]);
-        let tensor: Tensor<Backend, 3, Float> = Tensor::<Backend, 3, Float>::from_data(tensor_data, &device);
-
-        tensor
+        buffer_f32
     }
 
     pub fn episode_reward(&self) -> f32 {
