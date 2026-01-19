@@ -40,11 +40,14 @@ impl RetroEnv {
     }
 
 
-    pub fn reset(&self) {
+    pub fn reset(&self) -> Tensor<Wgpu, 3> {
         let episode_reward = self.data.total_reward();
         self.emu.set_start_state();
         self.data.reset();
         self.data.update_ram();
+        self.emu.step();
+
+        self.screen_to_tensor()
     }
 
     pub fn valid_action_keys(&self) -> Vec<i32> {
