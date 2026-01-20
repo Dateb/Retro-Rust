@@ -1,17 +1,16 @@
 use burn::Tensor;
 use rand::seq::index::sample;
-use arraydeque::{ArrayDeque, Wrapping};
 use burn::prelude::{Backend, Bool, Float, Int, TensorData};
 
 pub struct RetroBatch<B: Backend> {
-    pub images: Tensor<B, 4>,
+    pub images: Tensor<B, 3>,
     pub actions: Tensor<B, 1, Int>,
     pub rewards: Tensor<B, 1, Float>,
-    pub next_images: Tensor<B, 4>,
+    pub next_images: Tensor<B, 3>,
     pub dones: Tensor<B, 1, Bool>
 }
 
-const IMAGE_SIZE: usize = 320 * 320 * 3;
+const IMAGE_SIZE: usize = 84 * 84;
 const CAPACITY: usize = 1000;
 
 #[derive(Clone, Debug)]
@@ -88,10 +87,10 @@ impl<B: Backend> ReplayBuffer<B> {
             batch_images.extend_from_slice(&self.images[start..end]);
         }
 
-        let images: Tensor<B, 4> = Tensor::from_data(
+        let images: Tensor<B, 3> = Tensor::from_data(
             TensorData::new(
                 batch_images, // Vec<f32>, already flattened
-                [batch_size, 3, 320, 320],
+                [batch_size, 84, 84],
             ),
             &device,
         );
@@ -114,10 +113,10 @@ impl<B: Backend> ReplayBuffer<B> {
             batch_images.extend_from_slice(&self.images[start..end]);
         }
 
-        let next_images: Tensor<B, 4> = Tensor::from_data(
+        let next_images: Tensor<B, 3> = Tensor::from_data(
             TensorData::new(
                 batch_images, // Vec<f32>, already flattened
-                [batch_size, 3, 320, 320],
+                [batch_size, 84, 84],
             ),
             &device,
         );

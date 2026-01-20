@@ -4,6 +4,7 @@ mod gamestate;
 
 use std::path::Path;
 use burn::prelude::Backend;
+use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
 
 pub struct RetroEnv {
     emu: emulator::RustRetroEmulator,
@@ -86,10 +87,31 @@ impl RetroEnv {
             .get_screen()
             .expect("Screen not available");
 
-        // Convert u8 -> f32 and normalize
-        let buffer_f32: Vec<f32> = buffer.iter().map(|&x| x as f32 / 255.0).collect();
+        RetroEnv::preprocess_screen(buffer, w, h)
+    }
 
-        buffer_f32
+    fn preprocess_screen(buffer: Vec<u8>, w: i32, h: i32) -> Vec<f32> {
+        // 1. Convert buffer -> ImageBuffer
+        let img: RgbImage = ImageBuffer::from_raw(w as u32, h as u32, buffer)
+            .expect("Failed to convert screen buffer to image");
+
+        // 2. Resize to smaller dimensions, e.g., 84x84
+        let resized = resize(&img, 84, 84, FilterType::Nearest);
+
+        // 3. Optional: convert to grayscale
+        let gray: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_fn(resized.width(), resized.height(), |x, y| {
+            let pixel = resized.get_pixel(x, y);
+            // Standard grayscale: 0.299 R + 0.587 G + 0.114 B
+            let gray_val = (0.299 * pixel[0] as f32
+                + 0.587 * pixel[1] as f32
+                + 0.114 * pixel[2] as f32) as u8;
+            Luma([gray_val])
+        });
+
+        // 4. Flatten to Vec<f32> and normalize
+        gray.pixels()
+            .map(|p| p[0] as f32 / 255.0)
+            .collect()
     }
 
     pub fn episode_reward(&self) -> f32 {

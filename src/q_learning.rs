@@ -7,7 +7,8 @@ use rand::{rng, Rng, TryRngCore};
 use crate::q_learning::model::Model;
 use crate::q_learning::model_config::ModelConfig;
 use crate::q_learning::replay_buffer::ReplayBuffer;
-use burn::prelude::{Backend, ToElement};
+use burn::prelude::{Backend, TensorData, ToElement};
+use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
 use burn::train::TrainStep;
 use crate::env::RetroEnv;
@@ -48,42 +49,35 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
                 done
             );
 
-            if self.replay_buffer.len >= batch_size {
-                let start = Instant::now();
-                let retro_batch = self.replay_buffer.sample(32);
-                let duration = start.elapsed();
-                println!("sampling took {:?}", duration);
+            image = next_image.clone();
 
-                let start = Instant::now();
+            if self.replay_buffer.len >= batch_size {
+                let retro_batch = self.replay_buffer.sample(32);
+
                 let train_output
                     = TrainStep::step(&self.model, retro_batch);
-                let duration = start.elapsed();
-                println!("training took {:?}", duration);
 
                 if rng.random_range(0..100) < 5 {
                     next_action_index = rng.random_range(0..self.num_actions);
                 } else {
                     // Todo: There should be a way to avoid this forward pass (predict function)
-                    // Add batch dimension at axis 0
-                    // let next_image_batched = next_image.clone().unsqueeze_dim(0); // [1, C, H, W]
-                    //
-                    // let q_values = self.model.forward(next_image_batched);
-                    //
-                    // // argmax along classes → still shape [1, 1]
-                    // let next_action_tensor = q_values.argmax(1);
-                    //
-                    // // convert to scalar safely
-                    // next_action_index = next_action_tensor
-                    //     .into_scalar()       // tensor must have exactly 1 element
-                    //     .to_i32() as usize;  // convert generic backend IntElem → usize
-                    //
-                    // dbg!(next_action_index);
+                    let device = Default::default();
+
+                    let next_image_tensor: Tensor<B, 3> = Tensor::from_data(
+                        TensorData::new(
+                            next_image, // Vec<f32>, already flattened
+                            [1, 84, 84],
+                        ),
+                        &device,
+                    );
+
+                    let q_values = self.model.forward(next_image_tensor);
+                    next_action_index = q_values.argmax(1).into_scalar().to_i32() as usize;
                 }
             } else {
                 next_action_index = rng.random_range(0..self.num_actions);
             }
 
-            image = next_image;
             if done {
                 dbg!(env.episode_reward());
                 env.reset();
