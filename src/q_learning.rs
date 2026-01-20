@@ -1,28 +1,28 @@
-mod model;
-mod model_config;
+mod network;
+mod network_config;
 mod replay_buffer;
+mod model;
 
-use std::time::Instant;
+use burn::module::AutodiffModule;
 use rand::{rng, Rng, TryRngCore};
-use crate::q_learning::model::Model;
-use crate::q_learning::model_config::ModelConfig;
 use crate::q_learning::replay_buffer::ReplayBuffer;
-use burn::prelude::{Backend, TensorData, ToElement};
-use burn::Tensor;
+use burn::prelude::{Backend, ToElement};
 use burn::tensor::backend::AutodiffBackend;
 use burn::train::TrainStep;
 use crate::env::RetroEnv;
+use crate::q_learning::model::Model;
 
-pub struct QLearner<B: Backend> {
+const TARGET_UPDATE_INTERVAL: i32 = 1000;
+
+pub struct QLearner<B: AutodiffBackend> {
     model: Model<B>,
     num_actions: usize,
     pub replay_buffer: ReplayBuffer<B>
 }
 
-impl<B: Backend + AutodiffBackend> QLearner<B> {
+impl<B: AutodiffBackend> QLearner<B> {
     pub fn new(num_actions: usize) -> Self {
-        let device = Default::default();
-        let model = ModelConfig::new(num_actions, 512).init::<B>(&device);
+        let model: Model<B> = Model::new(num_actions);
         let replay_buffer = ReplayBuffer::new(1000);
 
         QLearner { model, replay_buffer, num_actions }
@@ -54,33 +54,24 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
             if self.replay_buffer.len >= batch_size {
                 let retro_batch = self.replay_buffer.sample(32);
 
-                let train_output
-                    = TrainStep::step(&self.model, retro_batch);
+                TrainStep::step(&self.model, retro_batch);
 
-                if rng.random_range(0..100) < 5 {
-                    next_action_index = rng.random_range(0..self.num_actions);
-                } else {
-                    // Todo: There should be a way to avoid this forward pass (predict function)
-                    let device = Default::default();
-
-                    let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
-                        TensorData::new(
-                            next_image, // Vec<f32>, already flattened
-                            [1, 4, 84, 84],
-                        ),
-                        &device,
-                    );
-
-                    let q_values = self.model.forward(next_image_tensor);
-                    next_action_index = q_values.argmax(1).into_scalar().to_i32() as usize;
-                }
+                next_action_index = match rng.random_range(0..100) < 5 {
+                    true => rng.random_range(0..self.num_actions),
+                    false => self.model.predict_action(next_image)
+                };
             } else {
                 next_action_index = rng.random_range(0..self.num_actions);
             }
 
             if done {
                 dbg!(env.episode_reward());
+                dbg!(i);
                 env.reset();
+            }
+
+            if (i + 1) % TARGET_UPDATE_INTERVAL == 0 {
+                self.model.update_target_network();
             }
         }
     }

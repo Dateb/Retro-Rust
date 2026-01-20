@@ -1,50 +1,26 @@
-use burn::backend::Wgpu;
 use burn::module::Module;
-use burn::nn::conv::Conv2d;
-use burn::nn::{Dropout, Linear, Relu};
-use burn::nn::loss::{CrossEntropyLossConfig, MseLoss, Reduction};
-use burn::nn::pool::AdaptiveAvgPool2d;
-use burn::prelude::{Backend, Bool, Float, TensorData};
+use burn::nn::loss::{MseLoss, Reduction};
+use burn::prelude::{Backend, Bool, Float, Int, TensorData, ToElement};
 use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Int;
-use burn::train::{ClassificationOutput, RegressionOutput, TrainOutput, TrainStep};
-use crate::q_learning::replay_buffer::{ReplayBuffer, RetroBatch};
+use burn::train::{RegressionOutput, TrainOutput, TrainStep};
+use crate::q_learning::network::Network;
+use crate::q_learning::network_config::NetworkConfig;
+use crate::q_learning::replay_buffer::RetroBatch;
 
 #[derive(Module, Debug)]
 pub struct Model<B: Backend> {
-    pub conv1: Conv2d<B>,
-    pub conv2: Conv2d<B>,
-    pub pool: AdaptiveAvgPool2d,
-    pub dropout: Dropout,
-    pub linear1: Linear<B>,
-    pub linear2: Linear<B>,
-    pub activation: Relu,
+    behavior_network: Network<B>,
+    target_network: Network<B>
 }
 
 impl<B: Backend> Model<B> {
-    /// # Shapes
-    ///   - Images [width, height, channel]
-    ///   - Output [batch_size, num_classes]
-    pub fn forward(&self, images: Tensor<B, 4>) -> Tensor<B, 2> {
-        let [batch_size, frames, height, width] = images.dims();
+    pub fn new(num_actions: usize) -> Self {
+        let device = Default::default();
+        let behavior_network = NetworkConfig::new(num_actions, 512).init::<B>(&device);
+        let target_network = NetworkConfig::new(num_actions, 512).init::<B>(&device);
 
-        // Permute dimensions to: [batch_size, channel, height, width]
-        let x = images.clone().reshape([batch_size, frames, height, width]);
-
-        let x = self.conv1.forward(x); // [batch_size, 8, _, _]
-        let x = self.dropout.forward(x);
-        let x = self.conv2.forward(x); // [batch_size, 16, _, _]
-        let x = self.dropout.forward(x);
-        let x = self.activation.forward(x);
-
-        let x = self.pool.forward(x); // [batch_size, 16, 8, 8]
-        let x = x.reshape([batch_size, 16 * 8 * 8]);
-        let x = self.linear1.forward(x);
-        let x = self.dropout.forward(x);
-        let x = self.activation.forward(x);
-
-        self.linear2.forward(x) // [batch_size, num_classes]
+        Model { behavior_network, target_network }
     }
 
     pub fn forward_regression(
@@ -58,11 +34,11 @@ impl<B: Backend> Model<B> {
 
         let gamma = 0.99;
 
-        let q_values_all = self.forward(images);
+        let q_values_all = self.behavior_network.forward(images);
         let q_values = q_values_all.gather(1, actions.unsqueeze_dim(1));
 
-        let next_q_values_all = self.forward(next_images);
-        let next_q_values = next_q_values_all.max_dim(1);
+        let next_q_values_all = self.target_network.forward(next_images);
+        let next_q_values = next_q_values_all.max_dim(1).detach();
 
         let dones_f: Tensor<B, 1, Float> = dones.clone().float();
         let target_q: Tensor<B, 2> = rewards.unsqueeze_dim(1) + gamma * next_q_values.clone() * (1 - dones_f.unsqueeze_dim(1));
@@ -70,6 +46,27 @@ impl<B: Backend> Model<B> {
             .forward(q_values.clone(), target_q.clone(), Reduction::Mean);
 
         RegressionOutput::new(loss, next_q_values.clone(), target_q)
+    }
+
+    pub fn predict_action(&self, image: Vec<f32>) -> usize {
+        let device = Default::default();
+
+        let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
+            TensorData::new(
+                image,
+                [1, 4, 84, 84],
+            ),
+            &device,
+        );
+
+        let q_values = self.behavior_network.forward(next_image_tensor);
+        let action = q_values.argmax(1).into_scalar().to_i32() as usize;
+
+        action
+    }
+
+    pub fn update_target_network(&mut self) {
+        self.target_network = self.behavior_network.clone();
     }
 }
 
