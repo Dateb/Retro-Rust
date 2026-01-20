@@ -6,10 +6,12 @@ mod frame_stack;
 use std::path::Path;
 use burn::prelude::Backend;
 use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
+use crate::env::frame_stack::FrameStack;
 
 pub struct RetroEnv {
     emu: emulator::RustRetroEmulator,
     data: gamedata::RustRetroGameData,
+    frame_stack: FrameStack,
     valid_action_keys: Vec<i32>,
     frame_skip: usize,
 }
@@ -33,27 +35,32 @@ impl RetroEnv {
         let data = gamedata::RustRetroGameData::new(game_path);
         emu.configure_data(&data);
 
+        let frame_stack = FrameStack::new(84 * 84);
         let valid_action_keys = data.get_valid_action_keys();
 
-        RetroEnv { emu, data, valid_action_keys, frame_skip: 4 }
+        RetroEnv { emu, data, frame_stack, valid_action_keys, frame_skip: 4 }
     }
 
 
-    pub fn reset(&self) -> Vec<f32> {
+    pub fn reset(&mut self) -> Vec<f32> {
         let episode_reward = self.data.total_reward();
         self.emu.set_start_state();
         self.data.reset();
         self.data.update_ram();
         self.emu.step();
+        self.frame_stack.clear();
 
-        self.get_screen_buffer()
+        let frame = self.get_screen_buffer();
+        self.frame_stack.push(frame);
+
+        self.frame_stack.stacked()
     }
 
     pub fn valid_action_keys(&self) -> Vec<i32> {
         self.data.get_valid_action_keys()
     }
 
-    pub fn step(&self, action_index: usize) -> (Vec<f32>, f32, bool) {
+    pub fn step(&mut self, action_index: usize) -> (Vec<f32>, f32, bool) {
         let mut action = self.valid_action_keys[action_index] as usize;
         let button_mask = RetroEnv::action_to_button_mask(action, 12);
         self.emu.set_button_mask(button_mask.as_slice(), 0);
@@ -64,7 +71,10 @@ impl RetroEnv {
             reward += self.data.current_reward();
         }
 
-        (self.get_screen_buffer(), reward, self.is_done())
+        let frame = self.get_screen_buffer();
+        self.frame_stack.push(frame);
+
+        (self.frame_stack.stacked(), reward, self.is_done())
     }
 
     pub fn action_to_button_mask(mut action: usize, n: usize) -> Vec<u8> {

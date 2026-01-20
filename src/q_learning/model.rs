@@ -26,11 +26,11 @@ impl<B: Backend> Model<B> {
     /// # Shapes
     ///   - Images [width, height, channel]
     ///   - Output [batch_size, num_classes]
-    pub fn forward(&self, images: Tensor<B, 3>) -> Tensor<B, 2> {
-        let [batch_size, height, width] = images.dims();
+    pub fn forward(&self, images: Tensor<B, 4>) -> Tensor<B, 2> {
+        let [batch_size, frames, height, width] = images.dims();
 
         // Permute dimensions to: [batch_size, channel, height, width]
-        let x = images.clone().reshape([batch_size, 1, height, width]);
+        let x = images.clone().reshape([batch_size, frames, height, width]);
 
         let x = self.conv1.forward(x); // [batch_size, 8, _, _]
         let x = self.dropout.forward(x);
@@ -49,10 +49,10 @@ impl<B: Backend> Model<B> {
 
     pub fn forward_regression(
         &self,
-        images: Tensor<B, 3>,
+        images: Tensor<B, 4>,
         actions: Tensor<B, 1, Int>,
         rewards: Tensor<B, 1, Float>,
-        next_images: Tensor<B, 3>,
+        next_images: Tensor<B, 4>,
         dones: Tensor<B, 1, Bool>
     ) -> RegressionOutput<B> {
 

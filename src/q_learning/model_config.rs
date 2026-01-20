@@ -17,7 +17,7 @@ impl ModelConfig {
     /// Returns the initialized model.
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
-            conv1: Conv2dConfig::new([1, 8], [3, 3]).init(device),
+            conv1: Conv2dConfig::new([4, 8], [3, 3]).init(device),
             conv2: Conv2dConfig::new([8, 16], [3, 3]).init(device),
             pool: AdaptiveAvgPool2dConfig::new([8, 8]).init(),
             activation: Relu::new(),

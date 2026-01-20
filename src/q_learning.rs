@@ -28,7 +28,7 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
         QLearner { model, replay_buffer, num_actions }
     }
 
-    pub fn learn(&mut self, env: RetroEnv) {
+    pub fn learn(&mut self, mut env: RetroEnv) {
         let batch_size = 32;
 
         let mut rng = rng();
@@ -63,10 +63,10 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
                     // Todo: There should be a way to avoid this forward pass (predict function)
                     let device = Default::default();
 
-                    let next_image_tensor: Tensor<B, 3> = Tensor::from_data(
+                    let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
                         TensorData::new(
                             next_image, // Vec<f32>, already flattened
-                            [1, 84, 84],
+                            [1, 4, 84, 84],
                         ),
                         &device,
                     );
