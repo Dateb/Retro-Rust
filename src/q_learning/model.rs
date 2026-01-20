@@ -27,10 +27,10 @@ impl<B: Backend> Model<B> {
     ///   - Images [width, height, channel]
     ///   - Output [batch_size, num_classes]
     pub fn forward(&self, images: Tensor<B, 4>) -> Tensor<B, 2> {
-        let [batch_size, width, height, channel] = images.dims();
+        let [batch_size, channel, height, width] = images.dims();
 
         // Permute dimensions to: [batch_size, channel, height, width]
-        let x = images.clone().reshape([batch_size, channel, height, width]);
+        let x = images.clone();
 
         let x = self.conv1.forward(x); // [batch_size, 8, _, _]
         let x = self.dropout.forward(x);

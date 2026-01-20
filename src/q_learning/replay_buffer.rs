@@ -11,74 +11,94 @@ pub struct RetroBatch<B: Backend> {
     pub dones: Tensor<B, 1, Bool>
 }
 
+const IMAGE_SIZE: usize = 320 * 320 * 3;
+const CAPACITY: usize = 1000;
+
 #[derive(Clone, Debug)]
 pub struct ReplayBuffer<B: Backend> {
-    images: ArrayDeque<Vec<f32>, 1000, Wrapping>,
-    actions: ArrayDeque<i32, 1000, Wrapping>,
-    rewards: ArrayDeque<f32, 1000, Wrapping>,
-    next_images: ArrayDeque<Vec<f32>, 1000, Wrapping>,
-    dones: ArrayDeque<bool, 1000, Wrapping>,
+    images: Vec<f32>,
+    actions: Vec<i32>,
+    rewards: Vec<f32>,
+    next_images: Vec<f32>,
+    dones: Vec<bool>,
+
+    capacity: usize,
+    pub len: usize,
+    pos: usize,
+
     _marker: std::marker::PhantomData<B>
 }
 
 impl<B: Backend> ReplayBuffer<B> {
-    pub fn new() -> Self {
-        ReplayBuffer {
-            images: ArrayDeque::new(),
-            actions: ArrayDeque::new(),
-            rewards: ArrayDeque::new(),
-            next_images: ArrayDeque::new(),
-            dones: ArrayDeque::new(),
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            images: vec![0.0; capacity * IMAGE_SIZE],
+            actions: vec![0; capacity],
+            rewards: vec![0.0; capacity],
+            next_images: vec![0.0; capacity * IMAGE_SIZE],
+            dones: vec![false; capacity],
+
+            capacity,
+            len: 0,
+            pos: 0,
+
             _marker: std::marker::PhantomData
         }
     }
 
     pub fn store_transition(
         &mut self,
-        image: Vec<f32>,
+        image: &[f32],        // length IMAGE_SIZE
         action: i32,
         reward: f32,
-        next_image: Vec<f32>,
-        done: bool
+        next_image: &[f32],
+        done: bool,
     ) {
-        self.images.push_front(image);
-        self.actions.push_front(action);
-        self.rewards.push_front(reward);
-        self.next_images.push_front(next_image);
-        self.dones.push_front(done);
+        let idx = self.pos;
+
+        let start = idx * IMAGE_SIZE;
+        let end = start + IMAGE_SIZE;
+
+        self.images[start..end].copy_from_slice(image);
+        self.next_images[start..end].copy_from_slice(next_image);
+
+        self.actions[idx] = action;
+        self.rewards[idx] = reward;
+        self.dones[idx] = done;
+
+        self.pos = (self.pos + 1) % self.capacity;
+        if self.len < self.capacity {
+            self.len += 1;
+        }
     }
 
     pub fn sample(&self, batch_size: usize) -> RetroBatch<B> {
-        let buffer_size = self.len();
-        assert!(batch_size <= buffer_size);
+        assert!(batch_size <= self.len);
 
         let device = Default::default();
-        let height = 320;
-        let width = 320;
-        let channels = 3;
 
         let mut rng = rand::rng();
-        let indices = sample(&mut rng, buffer_size, batch_size);
+        let indices = sample(&mut rng, self.len, batch_size);
+
+        let mut batch_images = Vec::with_capacity(batch_size * IMAGE_SIZE);
+
+        for i in indices.iter() {
+            let start = i * IMAGE_SIZE;
+            let end = start + IMAGE_SIZE;
+            batch_images.extend_from_slice(&self.images[start..end]);
+        }
+
+        let images: Tensor<B, 4> = Tensor::from_data(
+            TensorData::new(
+                batch_images, // Vec<f32>, already flattened
+                [batch_size, 3, 320, 320],
+            ),
+            &device,
+        );
 
         let actions = Tensor::<B, 1, Int>::from_ints(
             indices.iter().map(|i| self.actions[i]).collect::<Vec<i32>>().as_slice(),
             &device,
-        );
-
-        let batch_images_cpu: Vec<&Vec<f32>> = indices
-            .iter()
-            .map(|i| &self.images[i])
-            .collect();
-
-        let flattened_cpu_images: Vec<f32> = batch_images_cpu
-            .iter()
-            .flat_map(|frame| frame.iter()) // concatenate all frames
-            .copied()
-            .collect();
-
-        let images: Tensor<B, 4> = Tensor::from_data(
-            TensorData::new(flattened_cpu_images, [batch_size, height, width, channels]),
-            &device
         );
 
         let rewards = Tensor::<B, 1, Float>::from_floats(
@@ -86,20 +106,20 @@ impl<B: Backend> ReplayBuffer<B> {
             &device,
         );
 
-        let batch_images_cpu: Vec<&Vec<f32>> = indices
-            .iter()
-            .map(|i| &self.next_images[i])
-            .collect();
+        let mut batch_images = Vec::with_capacity(batch_size * IMAGE_SIZE);
 
-        let flattened_cpu_images: Vec<f32> = batch_images_cpu
-            .iter()
-            .flat_map(|frame| frame.iter()) // concatenate all frames
-            .copied()
-            .collect();
+        for i in indices.iter() {
+            let start = i * IMAGE_SIZE;
+            let end = start + IMAGE_SIZE;
+            batch_images.extend_from_slice(&self.images[start..end]);
+        }
 
         let next_images: Tensor<B, 4> = Tensor::from_data(
-            TensorData::new(flattened_cpu_images, [batch_size, height, width, channels]),
-            &device
+            TensorData::new(
+                batch_images, // Vec<f32>, already flattened
+                [batch_size, 3, 320, 320],
+            ),
+            &device,
         );
 
         let dones = Tensor::<B, 1, Bool>::from_bool(
@@ -108,9 +128,5 @@ impl<B: Backend> ReplayBuffer<B> {
         );
 
         RetroBatch { images, actions, rewards, next_images, dones }
-    }
-
-    pub fn len(&self) -> usize {
-        self.images.len()
     }
 }

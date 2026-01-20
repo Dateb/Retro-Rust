@@ -2,6 +2,7 @@ mod model;
 mod model_config;
 mod replay_buffer;
 
+use std::time::Instant;
 use rand::{rng, Rng, TryRngCore};
 use crate::q_learning::model::Model;
 use crate::q_learning::model_config::ModelConfig;
@@ -21,7 +22,7 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
     pub fn new(num_actions: usize) -> Self {
         let device = Default::default();
         let model = ModelConfig::new(num_actions, 512).init::<B>(&device);
-        let replay_buffer = ReplayBuffer::new();
+        let replay_buffer = ReplayBuffer::new(1000);
 
         QLearner { model, replay_buffer, num_actions }
     }
@@ -40,17 +41,24 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
             let done = step_info.2;
 
             self.replay_buffer.store_transition(
-                image.clone(),
+                &image,
                 next_action_index as i32,
                 reward,
-                next_image.clone(),
+                &next_image,
                 done
             );
 
-            if self.replay_buffer.len() >= batch_size {
+            if self.replay_buffer.len >= batch_size {
+                let start = Instant::now();
                 let retro_batch = self.replay_buffer.sample(32);
+                let duration = start.elapsed();
+                println!("sampling took {:?}", duration);
+
+                let start = Instant::now();
                 let train_output
                     = TrainStep::step(&self.model, retro_batch);
+                let duration = start.elapsed();
+                println!("training took {:?}", duration);
 
                 if rng.random_range(0..100) < 5 {
                     next_action_index = rng.random_range(0..self.num_actions);
@@ -76,7 +84,6 @@ impl<B: Backend + AutodiffBackend> QLearner<B> {
             }
 
             image = next_image;
-            dbg!(i);
             if done {
                 dbg!(env.episode_reward());
                 env.reset();
