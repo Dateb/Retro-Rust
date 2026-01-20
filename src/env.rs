@@ -1,6 +1,7 @@
 mod emulator;
 mod gamedata;
 mod gamestate;
+mod frame_stack;
 
 use std::path::Path;
 use burn::prelude::Backend;
@@ -56,12 +57,14 @@ impl RetroEnv {
         let mut action = self.valid_action_keys[action_index] as usize;
         let button_mask = RetroEnv::action_to_button_mask(action, 12);
         self.emu.set_button_mask(button_mask.as_slice(), 0);
+        let mut reward = 0.0;
         for _ in 0..self.frame_skip {
             self.emu.step();
             self.data.update_ram();
+            reward += self.data.current_reward();
         }
 
-        (self.get_screen_buffer(), self.data.current_reward(), self.is_done())
+        (self.get_screen_buffer(), reward, self.is_done())
     }
 
     pub fn action_to_button_mask(mut action: usize, n: usize) -> Vec<u8> {
