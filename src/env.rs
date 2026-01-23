@@ -18,7 +18,7 @@ pub struct RetroEnv {
 
 impl RetroEnv {
     pub fn new(game_path: String) -> Self {
-        let game_state_path = game_path.clone() + "/1Player.Level1.state";
+        let game_state_path = game_path.clone() + "/Level1.state";
         let start_game_state = gamestate::GameState::new(&game_state_path).expect("Failed to load state");
 
         let emu = emulator::RustRetroEmulator::new(start_game_state);

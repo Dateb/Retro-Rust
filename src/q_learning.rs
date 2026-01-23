@@ -65,8 +65,8 @@ impl<B: AutodiffBackend> QLearner<B> {
             }
 
             if done {
-                dbg!(env.episode_reward());
-                dbg!(i);
+                // dbg!(env.episode_reward());
+                // dbg!(i);
                 env.reset();
             }
 

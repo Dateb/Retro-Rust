@@ -15,8 +15,7 @@ use crate::q_learning::replay_buffer::{ReplayBuffer, RetroBatch};
 pub struct Network<B: Backend> {
     pub conv1: Conv2d<B>,
     pub conv2: Conv2d<B>,
-    pub pool: AdaptiveAvgPool2d,
-    pub dropout: Dropout,
+    pub conv3: Conv2d<B>,
     pub linear1: Linear<B>,
     pub linear2: Linear<B>,
     pub activation: Relu,
@@ -33,15 +32,15 @@ impl<B: Backend> Network<B> {
         let x = images.clone().reshape([batch_size, frames, height, width]);
 
         let x = self.conv1.forward(x); // [batch_size, 8, _, _]
-        let x = self.dropout.forward(x);
+        let x = self.activation.forward(x);
         let x = self.conv2.forward(x); // [batch_size, 16, _, _]
-        let x = self.dropout.forward(x);
+        let x = self.activation.forward(x);
+        let x = self.conv3.forward(x); // [batch_size, 16, _, _]
         let x = self.activation.forward(x);
 
-        let x = self.pool.forward(x); // [batch_size, 16, 8, 8]
-        let x = x.reshape([batch_size, 16 * 8 * 8]);
+        let x = x.reshape([batch_size, 64 * 7 * 7]);
+
         let x = self.linear1.forward(x);
-        let x = self.dropout.forward(x);
         let x = self.activation.forward(x);
 
         self.linear2.forward(x) // [batch_size, num_classes]
