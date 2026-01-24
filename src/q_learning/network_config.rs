@@ -10,8 +10,6 @@ use crate::q_learning::network::Network;
 pub struct NetworkConfig {
     num_classes: usize,
     hidden_size: usize,
-    #[config(default = "0.5")]
-    dropout: f64,
 }
 
 impl NetworkConfig {
