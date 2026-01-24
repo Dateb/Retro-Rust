@@ -43,13 +43,12 @@ impl RetroEnv {
 
 
     pub fn reset(&mut self) -> Vec<f32> {
-        let episode_reward = self.data.total_reward();
         self.emu.set_start_state();
         self.data.reset();
         self.data.update_ram();
         self.emu.step();
-        self.frame_stack.clear();
 
+        self.frame_stack.clear();
         let frame = self.get_screen_buffer();
         self.frame_stack.push(frame);
 

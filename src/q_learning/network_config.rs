@@ -4,7 +4,7 @@ use burn::nn::conv::Conv2dConfig;
 use burn::nn::pool::AdaptiveAvgPool2dConfig;
 use burn::nn::{DropoutConfig, LinearConfig, Relu};
 use burn::prelude::Backend;
-use crate::q_learning::network::Network;
+use crate::q_learning::model::Model;
 
 #[derive(Config, Debug)]
 pub struct NetworkConfig {
@@ -14,8 +14,8 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     /// Returns the initialized network.
-    pub fn init<B: Backend>(&self, device: &B::Device) -> Network<B> {
-        Network {
+    pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
+        Model {
             conv1: Conv2dConfig::new([4, 32], [8, 8])
                 .with_stride([4, 4])
                 .init(device),

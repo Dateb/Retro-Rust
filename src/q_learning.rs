@@ -1,22 +1,24 @@
-mod network;
 mod network_config;
 mod replay_buffer;
 mod model;
 mod utils;
 
 use burn::module::AutodiffModule;
+use burn::nn::loss::{MseLoss, Reduction};
 use burn::optim::{AdamConfig, GradientsParams, Optimizer};
 use rand::{rng, Rng, TryRngCore};
-use crate::q_learning::replay_buffer::ReplayBuffer;
-use burn::prelude::{Backend, ToElement};
+use crate::q_learning::replay_buffer::{ReplayBuffer, RetroBatch};
+use burn::prelude::{Backend, Float, Int, TensorData, ToElement};
+use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Device;
 use burn::train::TrainStep;
 use crate::env::RetroEnv;
-use crate::q_learning::model::{train_step, Model};
+use crate::q_learning::model::Model;
+use crate::q_learning::network_config::NetworkConfig;
 use crate::timeit;
 
-const TARGET_UPDATE_INTERVAL: i32 = 10000;
+const TARGET_UPDATE_INTERVAL: i32 = 1000;
 
 pub struct QLearner<B: AutodiffBackend> {
     device: Device<B>,
@@ -33,7 +35,9 @@ impl<B: AutodiffBackend> QLearner<B> {
     }
 
     pub fn learn(&mut self, mut env: RetroEnv) {
-        let mut model: Model<B> = Model::new(&self.device, self.num_actions);
+        let mut target_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
+        target_network.valid();
+        let mut behavior_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
         let batch_size = 32;
         let mut optimizer = AdamConfig::new().init();
 
@@ -58,21 +62,29 @@ impl<B: AutodiffBackend> QLearner<B> {
             image = next_image.clone();
 
             if self.replay_buffer.len >= batch_size {
-                let retro_batch = timeit!("sample", {self.replay_buffer.sample(32, &self.device)});
-                // let retro_batch = self.replay_buffer.sample(32, &self.device);
+                // let retro_batch = timeit!("sample", {self.replay_buffer.sample(32, &self.device)});
+                let retro_batch = self.replay_buffer.sample(32, &self.device);
 
-                let loss = timeit!("train", {train_step(&model, retro_batch)});
-                // let loss = train_step(&model, retro_batch);
+                let loss = self.forward_regression(
+                    retro_batch.images,
+                    retro_batch.actions,
+                    retro_batch.rewards,
+                    retro_batch.next_images,
+                    retro_batch.dones,
+                    &behavior_network,
+                    &target_network,
+                    0.99,
+                );
 
                 let gradients = loss.backward();
-                let gradient_params = GradientsParams::from_grads(gradients, &model);
-                model = optimizer.step(1e-4, model, gradient_params);
+                let gradient_params = GradientsParams::from_grads(gradients, &behavior_network);
 
+                behavior_network.valid();
                 next_action_index = match rng.random_range(0..100) < 5 {
                     true => rng.random_range(0..self.num_actions),
-                    // false => model.predict_action(&self.device, next_image)
-                    false => rng.random_range(0..self.num_actions)
+                    false => self.predict_action(next_image, &behavior_network)
                 };
+                behavior_network = optimizer.step(1e-4, behavior_network, gradient_params);
             } else {
                 next_action_index = rng.random_range(0..self.num_actions);
             }
@@ -80,12 +92,50 @@ impl<B: AutodiffBackend> QLearner<B> {
             if done {
                 dbg!(env.episode_reward());
                 dbg!(i);
-                env.reset();
+                image = env.reset();
             }
 
             if (i + 1) % TARGET_UPDATE_INTERVAL == 0 {
-                model.update_target_network();
+                target_network = behavior_network.clone();
+                target_network.valid();
             }
         }
+    }
+
+    pub fn forward_regression(
+        &self,
+        images: Tensor<B, 4>,
+        actions: Tensor<B, 1, Int>,
+        rewards: Tensor<B, 1, Float>,
+        next_images: Tensor<B, 4>,
+        dones: Tensor<B, 1, Float>,
+        behavior_network: &Model<B>,
+        target_network: &Model<B>,
+        gamma: f64,
+    ) -> Tensor<B, 1> {
+        // Q(s, a)
+        let q_values_all: Tensor<B, 2> = behavior_network.forward(images);
+        let q_values: Tensor<B, 1> = q_values_all.gather(1, actions.unsqueeze_dim(1)).squeeze();
+
+        // max_a' Q_target(s', a')
+        let next_q_values_all = target_network.forward(next_images);
+        let next_q_values: Tensor<B, 1> = next_q_values_all.max_dim(1).squeeze();
+
+        let target_q = rewards + gamma * next_q_values.mul(1.0 - dones);
+
+        // MSE loss
+        MseLoss::new().forward(q_values, target_q, Reduction::Mean)
+    }
+
+    pub fn predict_action(&self, image: Vec<f32>, behavior_network: &Model<B>) -> usize {
+        let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
+            TensorData::new(image, [1, 4, 84, 84]),
+            &self.device,
+        );
+
+        let q_values = behavior_network.forward(next_image_tensor);
+        let action = q_values.argmax(1).into_scalar().to_i32() as usize;
+
+        action
     }
 }
