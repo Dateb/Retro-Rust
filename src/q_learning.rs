@@ -7,7 +7,7 @@ use burn::module::AutodiffModule;
 use burn::nn::loss::{MseLoss, Reduction};
 use burn::optim::{AdamConfig, GradientsParams, Optimizer};
 use rand::{rng, Rng, TryRngCore};
-use crate::q_learning::replay_buffer::{ReplayBuffer, RetroBatch};
+use crate::q_learning::replay_buffer::ReplayBuffer;
 use burn::prelude::{Backend, Float, Int, TensorData, ToElement};
 use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
@@ -36,7 +36,6 @@ impl<B: AutodiffBackend> QLearner<B> {
 
     pub fn learn(&mut self, mut env: RetroEnv) {
         let mut target_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
-        target_network.valid();
         let mut behavior_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
         let batch_size = 32;
         let mut optimizer = AdamConfig::new().init();
@@ -79,7 +78,6 @@ impl<B: AutodiffBackend> QLearner<B> {
                 let gradients = loss.backward();
                 let gradient_params = GradientsParams::from_grads(gradients, &behavior_network);
 
-                behavior_network.valid();
                 next_action_index = match rng.random_range(0..100) < 5 {
                     true => rng.random_range(0..self.num_actions),
                     false => self.predict_action(next_image, &behavior_network)
@@ -124,7 +122,7 @@ impl<B: AutodiffBackend> QLearner<B> {
         let target_q = rewards + gamma * next_q_values.mul(1.0 - dones);
 
         // MSE loss
-        MseLoss::new().forward(q_values, target_q, Reduction::Mean)
+        MseLoss::new().forward(q_values, target_q.detach(), Reduction::Mean)
     }
 
     pub fn predict_action(&self, image: Vec<f32>, behavior_network: &Model<B>) -> usize {
@@ -133,7 +131,7 @@ impl<B: AutodiffBackend> QLearner<B> {
             &self.device,
         );
 
-        let q_values = behavior_network.forward(next_image_tensor);
+        let q_values = behavior_network.forward(next_image_tensor).detach();
         let action = q_values.argmax(1).into_scalar().to_i32() as usize;
 
         action

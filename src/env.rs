@@ -38,6 +38,8 @@ impl RetroEnv {
         let frame_stack = FrameStack::new(84 * 84);
         let valid_action_keys = data.get_valid_action_keys();
 
+        dbg!(valid_action_keys.clone());
+
         RetroEnv { emu, data, frame_stack, valid_action_keys, frame_skip: 4 }
     }
 
