@@ -2,17 +2,19 @@ mod emulator;
 mod gamedata;
 mod gamestate;
 mod frame_stack;
+mod controller;
 
 use std::path::Path;
 use burn::prelude::Backend;
 use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
+use crate::env::controller::Controller;
 use crate::env::frame_stack::FrameStack;
 
 pub struct RetroEnv {
     emu: emulator::RustRetroEmulator,
     data: gamedata::RustRetroGameData,
+    controller: Controller,
     frame_stack: FrameStack,
-    valid_action_keys: Vec<i32>,
     frame_skip: usize,
 }
 
@@ -35,12 +37,11 @@ impl RetroEnv {
         let data = gamedata::RustRetroGameData::new(game_path);
         emu.configure_data(&data);
 
+        let controller = Controller::new(data.get_button_combos());
+
         let frame_stack = FrameStack::new(84 * 84);
-        let valid_action_keys = data.get_valid_action_keys();
 
-        dbg!(valid_action_keys.clone());
-
-        RetroEnv { emu, data, frame_stack, valid_action_keys, frame_skip: 4 }
+        RetroEnv { emu, data, controller, frame_stack, frame_skip: 4 }
     }
 
 
@@ -57,14 +58,9 @@ impl RetroEnv {
         self.frame_stack.stacked()
     }
 
-    pub fn valid_action_keys(&self) -> Vec<i32> {
-        self.data.get_valid_action_keys()
-    }
+    pub fn step(&mut self, action: usize) -> (Vec<f32>, f32, bool) {
+        self.emu.set_button_mask(self.controller.get_button_bitmask(action).as_slice(), 0);
 
-    pub fn step(&mut self, action_index: usize) -> (Vec<f32>, f32, bool) {
-        let mut action = self.valid_action_keys[action_index] as usize;
-        let button_mask = RetroEnv::action_to_button_mask(action, 12);
-        self.emu.set_button_mask(button_mask.as_slice(), 0);
         let mut reward = 0.0;
         for _ in 0..self.frame_skip {
             self.emu.step();
@@ -76,19 +72,6 @@ impl RetroEnv {
         self.frame_stack.push(frame);
 
         (self.frame_stack.stacked(), reward, self.is_done())
-    }
-
-    pub fn action_to_button_mask(mut action: usize, n: usize) -> Vec<u8> {
-        assert!(action < (1usize << n), "value out of range for {} bits", n);
-
-        let mut button_mask = Vec::with_capacity(n);
-
-        for _ in 0..n {
-            button_mask.push((action & 1) as u8);
-            action >>= 1;
-        }
-
-        button_mask
     }
 
     pub fn is_done(&self) -> bool {
@@ -132,9 +115,7 @@ impl RetroEnv {
         self.data.total_reward()
     }
 
-    pub fn num_actions(&self) -> usize {
-        self.valid_action_keys.len()
-    }
+    pub fn num_actions(&self) -> usize { self.controller.num_actions }
 
     pub fn print_screen(&self) {
         if let Some((pixels, width, height)) = self.emu.get_screen() {

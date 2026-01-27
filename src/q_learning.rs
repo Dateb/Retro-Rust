@@ -17,21 +17,24 @@ use crate::env::RetroEnv;
 use crate::q_learning::model::Model;
 use crate::q_learning::network_config::NetworkConfig;
 use crate::timeit;
+use crate::q_learning::utils::RollingAverage4;
 
 const TARGET_UPDATE_INTERVAL: i32 = 1000;
 
 pub struct QLearner<B: AutodiffBackend> {
     device: Device<B>,
     num_actions: usize,
-    pub replay_buffer: ReplayBuffer<B>
+    pub replay_buffer: ReplayBuffer<B>,
+    rewards: RollingAverage4
 }
 
 impl<B: AutodiffBackend> QLearner<B> {
     pub fn new(num_actions: usize) -> Self {
         let device = Default::default();
         let replay_buffer = ReplayBuffer::new(100_000);
+        let rewards = RollingAverage4::new();
 
-        QLearner { device, replay_buffer, num_actions }
+        QLearner { device, replay_buffer, num_actions, rewards }
     }
 
     pub fn learn(&mut self, mut env: RetroEnv) {
@@ -43,7 +46,7 @@ impl<B: AutodiffBackend> QLearner<B> {
         let mut rng = rng();
         let mut image = env.reset();
         let mut next_action_index = 0usize;
-        for i in 1..1000000 {
+        for i in 1..1_000_000 {
             let step_info = env.step(next_action_index);
 
             let next_image = step_info.0;
@@ -88,7 +91,8 @@ impl<B: AutodiffBackend> QLearner<B> {
             }
 
             if done {
-                dbg!(env.episode_reward());
+                self.rewards.push(env.episode_reward());
+                dbg!(self.rewards.average().expect("No elements to average over"));
                 dbg!(i);
                 image = env.reset();
             }

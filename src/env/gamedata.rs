@@ -67,7 +67,7 @@ impl RustRetroGameData {
         }
     }
 
-    pub fn get_valid_action_keys(&self) -> Vec<i32> {
+    pub fn get_button_combos(&self) -> Vec<Vec<u64>> {
         unsafe {
             let mut n: usize = 0;
             let ptr = gamedata_valid_actions(self.retro_data, &mut n);
@@ -76,7 +76,17 @@ impl RustRetroGameData {
 
             for i in 0..n {
                 let entry = &*ptr.add(i);
-                result.push(entry.key);
+
+                // Copy values from raw pointer into Rust Vec
+                let values: Vec<u64> = std::slice::from_raw_parts(
+                    entry.values,
+                    entry.num_values,
+                )
+                    .iter()
+                    .map(|&v| v as u64)
+                    .collect();
+
+                result.push(values);
             }
 
             gamedata_free_valid_actions(ptr, n);
