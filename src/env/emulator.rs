@@ -61,8 +61,8 @@ impl RustRetroEmulator {
     }
     pub fn get_screen(&self) -> Option<(Vec<u8>, i32, i32)> {
         unsafe {
-            let mut w = emulator_get_screen_width(self.retro_emulator);
-            let mut h = emulator_get_screen_height(self.retro_emulator);
+            let w = emulator_get_screen_width(self.retro_emulator);
+            let h = emulator_get_screen_height(self.retro_emulator);
 
             let mut buffer = vec![0u8; (w * h * 3) as usize];
 

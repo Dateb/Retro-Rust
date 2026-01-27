@@ -1,15 +1,8 @@
 use burn::module::Module;
 use burn::nn::conv::Conv2d;
 use burn::nn::{Linear, Relu};
-use burn::nn::loss::{MseLoss, Reduction};
-use burn::optim::{GradientsParams, LearningRate, Optimizer};
-use burn::prelude::{Backend, Bool, Float, Int, TensorData, ToElement};
+use burn::prelude::Backend;
 use burn::Tensor;
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Device;
-use burn::train::{RegressionOutput, TrainOutput, TrainStep};
-use crate::q_learning::network_config::NetworkConfig;
-use crate::q_learning::replay_buffer::RetroBatch;
 
 #[derive(Module, Debug)]
 pub struct Model<B: Backend> {

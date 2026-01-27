@@ -1,8 +1,6 @@
 use burn::config::Config;
-use burn::module::AutodiffModule;
 use burn::nn::conv::Conv2dConfig;
-use burn::nn::pool::AdaptiveAvgPool2dConfig;
-use burn::nn::{DropoutConfig, LinearConfig, Relu};
+use burn::nn::{LinearConfig, Relu};
 use burn::prelude::Backend;
 use crate::q_learning::model::Model;
 

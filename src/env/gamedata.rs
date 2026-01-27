@@ -1,5 +1,4 @@
 use std::ffi::CString;
-use std::fs;
 use std::path::Path;
 
 #[repr(C)]
@@ -24,7 +23,7 @@ unsafe extern "C" {
         gamedata: *mut RetroGameData,
         num_entries: *mut usize
     ) -> *mut RetroActionSet;
-    pub fn gamedata_free_valid_actions(
+    fn gamedata_free_valid_actions(
         actions: *mut RetroActionSet,
         num_entries: usize,
     );

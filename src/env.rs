@@ -5,7 +5,6 @@ mod frame_stack;
 mod controller;
 
 use std::path::Path;
-use burn::prelude::Backend;
 use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
 use crate::env::controller::Controller;
 use crate::env::frame_stack::FrameStack;
@@ -116,17 +115,4 @@ impl RetroEnv {
     }
 
     pub fn num_actions(&self) -> usize { self.controller.num_actions }
-
-    pub fn print_screen(&self) {
-        if let Some((pixels, width, height)) = self.emu.get_screen() {
-            println!("Got frame {}x{}", width, height);
-
-            for b in &pixels {
-                print!("{:02X} ", b);
-            }
-            println!();
-        } else {
-            println!("No frame available");
-        }
-    }
 }

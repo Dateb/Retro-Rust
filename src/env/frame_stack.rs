@@ -25,6 +25,7 @@ impl FrameStack {
 
 impl FrameStack {
     pub fn push(&mut self, frame: Vec<f32>) {
+
         debug_assert_eq!(frame.len(), self.frame_size);
         self.frames.push_back(frame);
     }
@@ -32,10 +33,15 @@ impl FrameStack {
     pub fn stacked(&self) -> Vec<f32> {
         let mut out = Vec::with_capacity(self.frames.len() * self.frame_size);
 
-        for frame in self.frames.iter() {
-            out.extend_from_slice(frame);
-        }
+        let n = self.frames.len();
 
+        for (i, frame) in self.frames.iter().enumerate() {
+            if i == n - 1 && n >= 2 {
+                out.extend_from_slice(&self.max_last_two());
+            } else {
+                out.extend_from_slice(frame);
+            }
+        }
         out
     }
 
@@ -45,6 +51,22 @@ impl FrameStack {
         for _ in 0..STACK_SIZE {
             self.push(zero_frame.clone());
         }
+    }
+
+    /// Returns the elementwise max over the last 2 frames
+    fn max_last_two(&self) -> Vec<f32> {
+        // Make sure we have at least 2 frames
+        if self.frames.len() < 2 {
+            return self.frames.back().cloned().unwrap_or_else(|| vec![0.0; self.frame_size]);
+        }
+
+        let last = self.frames.get(self.frames.len() - 1).unwrap();
+        let second_last = self.frames.get(self.frames.len() - 2).unwrap();
+
+        last.iter()
+            .zip(second_last.iter())
+            .map(|(a, b)| a.max(*b))
+            .collect()
     }
 }
 

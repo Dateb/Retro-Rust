@@ -6,17 +6,15 @@ mod utils;
 use burn::module::AutodiffModule;
 use burn::nn::loss::{MseLoss, Reduction};
 use burn::optim::{AdamConfig, GradientsParams, Optimizer};
-use rand::{rng, Rng, TryRngCore};
+use rand::{rng, Rng};
 use crate::q_learning::replay_buffer::ReplayBuffer;
-use burn::prelude::{Backend, Float, Int, TensorData, ToElement};
+use burn::prelude::{Float, Int, TensorData, ToElement};
 use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Device;
-use burn::train::TrainStep;
 use crate::env::RetroEnv;
 use crate::q_learning::model::Model;
 use crate::q_learning::network_config::NetworkConfig;
-use crate::timeit;
 use crate::q_learning::utils::RollingAverage4;
 
 const TARGET_UPDATE_INTERVAL: i32 = 1000;
@@ -31,7 +29,7 @@ pub struct QLearner<B: AutodiffBackend> {
 impl<B: AutodiffBackend> QLearner<B> {
     pub fn new(num_actions: usize) -> Self {
         let device = Default::default();
-        let replay_buffer = ReplayBuffer::new(100_000);
+        let replay_buffer = ReplayBuffer::new(10_000);
         let rewards = RollingAverage4::new();
 
         QLearner { device, replay_buffer, num_actions, rewards }
