@@ -1,11 +1,12 @@
 mod network_config;
 mod replay_buffer;
-mod model;
+pub(crate) mod model;
 mod utils;
 
 use burn::module::AutodiffModule;
 use burn::nn::loss::{MseLoss, Reduction};
-use burn::optim::{AdamConfig, GradientsParams, Optimizer};
+use burn::optim::{Adam, AdamConfig, GradientsParams, Optimizer};
+use burn::optim::adaptor::OptimizerAdaptor;
 use rand::{rng, Rng};
 use crate::q_learning::replay_buffer::ReplayBuffer;
 use burn::prelude::{Float, Int, TensorData, ToElement};
@@ -15,37 +16,63 @@ use burn::tensor::Device;
 use crate::env::RetroEnv;
 use crate::q_learning::model::Model;
 use crate::q_learning::network_config::NetworkConfig;
-use crate::q_learning::utils::RollingAverage4;
+use crate::q_learning::utils::RollingAverage;
 
-const TARGET_UPDATE_INTERVAL: i32 = 1000;
+const TARGET_UPDATE_INTERVAL: usize = 1000;
 
 pub struct QLearner<B: AutodiffBackend> {
     device: Device<B>,
-    num_actions: usize,
+    target_network: Model<B>,
     pub replay_buffer: ReplayBuffer<B>,
-    rewards: RollingAverage4
+    optimizer: OptimizerAdaptor<Adam, Model<B>, B>,
+    num_actions: usize,
+    batch_size: usize,
+    pub rewards: RollingAverage,
+    iteration_count: usize
 }
 
 impl<B: AutodiffBackend> QLearner<B> {
     pub fn new(num_actions: usize) -> Self {
         let device = Default::default();
+        let mut target_network: Model<B> = NetworkConfig::new(num_actions, 512).init(&device);
+        let batch_size = 32;
         let replay_buffer = ReplayBuffer::new(10_000);
-        let rewards = RollingAverage4::new();
+        let mut optimizer = AdamConfig::new().init();
+        let rewards = RollingAverage::new();
+        let mut iteration_count = 0;
 
-        QLearner { device, replay_buffer, num_actions, rewards }
+        QLearner {
+            device,
+            target_network,
+            replay_buffer,
+            optimizer,
+            num_actions,
+            batch_size,
+            rewards,
+            iteration_count
+        }
     }
 
-    pub fn learn(&mut self, mut env: RetroEnv) {
-        let mut target_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
-        let mut behavior_network: Model<B> = NetworkConfig::new(self.num_actions, 512).init(&self.device);
-        let batch_size = 32;
-        let mut optimizer = AdamConfig::new().init();
+    pub fn new_policy_network(&self) -> Model<B> {
+        NetworkConfig::new(self.num_actions, 512).init(&self.device)
+    }
 
-        let mut rng = rng();
+    pub fn learn(&mut self, env: &mut RetroEnv, num_episodes: usize) {
+        let mut policy_network: Model<B> = self.new_policy_network();
+        for _ in 1..num_episodes {
+            policy_network = self.learn_episode(env, policy_network);
+
+            dbg!(self.rewards.average().expect("No elements to average over"));
+            dbg!(self.iteration_count);
+        }
+    }
+
+    pub fn learn_episode(&mut self, env: &mut RetroEnv, mut policy_network: Model<B>) -> Model<B> {
         let mut image = env.reset();
-        let mut next_action_index = 0usize;
-        for i in 1..1_000_000 {
-            let step_info = env.step(next_action_index);
+        let mut next_action = self.get_next_action(&policy_network, image.clone());
+
+        while !env.is_done() {
+            let step_info = env.step(next_action);
 
             let next_image = step_info.0;
             let reward = step_info.1;
@@ -53,7 +80,7 @@ impl<B: AutodiffBackend> QLearner<B> {
 
             self.replay_buffer.store_transition(
                 &image,
-                next_action_index as i32,
+                next_action as i32,
                 reward,
                 &next_image,
                 done
@@ -61,48 +88,65 @@ impl<B: AutodiffBackend> QLearner<B> {
 
             image = next_image.clone();
 
-            if self.replay_buffer.len >= batch_size {
-                // let retro_batch = timeit!("sample", {self.replay_buffer.sample(32, &self.device)});
-                let retro_batch = self.replay_buffer.sample(32, &self.device);
+            next_action = match self.replay_buffer.len >= self.batch_size {
+                true => {
+                    policy_network = self.train(policy_network);
+                    self.get_next_action(&policy_network, next_image.clone())
+                },
+                false => rng().random_range(0..self.num_actions)
+            };
 
-                let loss = self.forward_regression(
-                    retro_batch.images,
-                    retro_batch.actions,
-                    retro_batch.rewards,
-                    retro_batch.next_images,
-                    retro_batch.dones,
-                    &behavior_network,
-                    &target_network,
-                    0.99,
-                );
-
-                let gradients = loss.backward();
-                let gradient_params = GradientsParams::from_grads(gradients, &behavior_network);
-
-                next_action_index = match rng.random_range(0..100) < 5 {
-                    true => rng.random_range(0..self.num_actions),
-                    false => self.predict_action(next_image, &behavior_network)
-                };
-                behavior_network = optimizer.step(1e-4, behavior_network, gradient_params);
-            } else {
-                next_action_index = rng.random_range(0..self.num_actions);
+            if (self.iteration_count + 1) % TARGET_UPDATE_INTERVAL == 0 {
+                self.target_network = policy_network.clone();
             }
+            self.iteration_count += 1;
+        }
 
-            if done {
-                self.rewards.push(env.episode_reward());
-                dbg!(self.rewards.average().expect("No elements to average over"));
-                dbg!(i);
-                image = env.reset();
-            }
+        self.rewards.push(env.episode_reward());
 
-            if (i + 1) % TARGET_UPDATE_INTERVAL == 0 {
-                target_network = behavior_network.clone();
-                target_network.valid();
-            }
+        policy_network
+    }
+
+    fn train(&mut self, policy_network: Model<B>) -> Model<B> {
+        let retro_batch = self.replay_buffer.sample(32, &self.device);
+
+        let loss = self.forward_regression(
+            retro_batch.images,
+            retro_batch.actions,
+            retro_batch.rewards,
+            retro_batch.next_images,
+            retro_batch.dones,
+            &policy_network,
+            &self.target_network,
+            0.99,
+        );
+
+        let gradients = loss.backward();
+        let gradient_params = GradientsParams::from_grads(gradients, &policy_network);
+
+        self.optimizer.step(1e-4, policy_network, gradient_params)
+    }
+
+    fn get_next_action(&self, policy_network: &Model<B>, image: Vec<f32>) -> usize {
+        match rng().random_range(0..100) < 5 {
+            true => rng().random_range(0..self.num_actions),
+            false => self.predict_action(image, &policy_network)
         }
     }
 
-    pub fn forward_regression(
+    fn predict_action(&self, image: Vec<f32>, behavior_network: &Model<B>) -> usize {
+        let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
+            TensorData::new(image, [1, 4, 84, 84]),
+            &self.device,
+        );
+
+        let q_values = behavior_network.forward(next_image_tensor).detach();
+        let action = q_values.argmax(1).into_scalar().to_i32() as usize;
+
+        action
+    }
+
+    fn forward_regression(
         &self,
         images: Tensor<B, 4>,
         actions: Tensor<B, 1, Int>,
@@ -123,19 +167,6 @@ impl<B: AutodiffBackend> QLearner<B> {
 
         let target_q = rewards + gamma * next_q_values.mul(1.0 - dones);
 
-        // MSE loss
         MseLoss::new().forward(q_values, target_q.detach(), Reduction::Mean)
-    }
-
-    pub fn predict_action(&self, image: Vec<f32>, behavior_network: &Model<B>) -> usize {
-        let next_image_tensor: Tensor<B, 4> = Tensor::from_data(
-            TensorData::new(image, [1, 4, 84, 84]),
-            &self.device,
-        );
-
-        let q_values = behavior_network.forward(next_image_tensor).detach();
-        let action = q_values.argmax(1).into_scalar().to_i32() as usize;
-
-        action
     }
 }

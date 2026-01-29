@@ -1,8 +1,9 @@
-use burn::module::Module;
+use burn::module::{AutodiffModule, Module};
 use burn::nn::conv::Conv2d;
 use burn::nn::{Linear, Relu};
 use burn::prelude::Backend;
 use burn::Tensor;
+use burn::tensor::backend::AutodiffBackend;
 
 #[derive(Module, Debug)]
 pub struct Model<B: Backend> {
@@ -39,4 +40,3 @@ impl<B: Backend> Model<B> {
         self.linear2.forward(x) // [batch_size, num_classes]
     }
 }
-
