@@ -27,7 +27,7 @@ impl<B: Backend + AutodiffBackend> Policy<B> {
     }
 
     pub fn get_next_action(&self, image: Vec<f32>, num_actions: usize, device: &Device<B>) -> usize {
-        match rng().random_range(0..100) < 98 {
+        match rng().random_range(0..100) < 6 {
             true => rng().random_range(0..num_actions),
             false => self.predict_action(image, device)
         }

@@ -1,3 +1,4 @@
+use std::cmp;
 use burn::Tensor;
 use rand::seq::index::sample;
 use burn::prelude::{Backend, Float, Int, TensorData};
@@ -21,15 +22,18 @@ pub struct ReplayBuffer<B: Backend> {
     next_images: Vec<f32>,
     dones: Vec<f32>,
 
+    batch_size: usize,
     capacity: usize,
+    min_samples: usize,
     pub len: usize,
     pos: usize,
 
     _marker: std::marker::PhantomData<B>
 }
 
+// actions: Vec<Option<Tensor<B, 1, Int>>>
 impl<B: Backend> ReplayBuffer<B> {
-    pub fn new(capacity: usize) -> Self {
+    pub fn new(batch_size: usize, capacity: usize, min_samples: usize) -> Self {
         Self {
             images: vec![0.0; capacity * IMAGE_SIZE],
             actions: vec![0; capacity],
@@ -37,7 +41,9 @@ impl<B: Backend> ReplayBuffer<B> {
             next_images: vec![0.0; capacity * IMAGE_SIZE],
             dones: vec![0.0; capacity],
 
+            batch_size,
             capacity,
+            min_samples: cmp::max(batch_size, min_samples),
             len: 0,
             pos: 0,
 
@@ -123,5 +129,9 @@ impl<B: Backend> ReplayBuffer<B> {
         );
 
         RetroBatch { images, actions, rewards, next_images, dones }
+    }
+
+    pub fn learning_is_ready(&self) -> bool {
+        self.len >= self.min_samples
     }
 }

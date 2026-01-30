@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use burn::backend::{Autodiff, Wgpu};
 use std::time::Instant;
 use crate::env::RetroEnv;
-use crate::q_learning::model::Model;
 use crate::q_learning::QLearner;
 use crate::q_learning::policy::Policy;
 

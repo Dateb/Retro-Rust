@@ -28,7 +28,6 @@ pub struct QLearner<B: AutodiffBackend> {
     pub replay_buffer: ReplayBuffer<B>,
     optimizer: OptimizerAdaptor<Adam, Model<B>, B>,
     num_actions: usize,
-    batch_size: usize,
     pub rewards: RollingAverage,
     iteration_count: usize
 }
@@ -36,8 +35,8 @@ pub struct QLearner<B: AutodiffBackend> {
 impl<B: AutodiffBackend> QLearner<B> {
     pub fn new(device: &Device<B>, num_actions: usize) -> Self {
         let mut target_network: Model<B> = NetworkConfig::new(num_actions, 512).init(device);
-        let batch_size = 32;
-        let replay_buffer = ReplayBuffer::new(10_000);
+        let capacity = 10_000;
+        let replay_buffer = ReplayBuffer::new(32, capacity, capacity);
         let mut optimizer = AdamConfig::new().init();
         let rewards = RollingAverage::new();
         let mut iteration_count = 0;
@@ -48,7 +47,6 @@ impl<B: AutodiffBackend> QLearner<B> {
             replay_buffer,
             optimizer,
             num_actions,
-            batch_size,
             rewards,
             iteration_count
         }
@@ -85,7 +83,7 @@ impl<B: AutodiffBackend> QLearner<B> {
 
             image = next_image.clone();
 
-            next_action = match self.replay_buffer.len >= self.batch_size {
+            next_action = match self.replay_buffer.learning_is_ready() {
                 true => {
                     policy = self.train(policy);
                     policy.get_next_action(next_image.clone(), env.num_actions(), &self.device)
@@ -101,7 +99,7 @@ impl<B: AutodiffBackend> QLearner<B> {
 
         self.rewards.push(env.episode_reward());
 
-        Policy::new(&self.device, env.num_actions())
+        policy
     }
 
     fn train(&mut self, policy: Policy<B>) -> Policy<B> {
