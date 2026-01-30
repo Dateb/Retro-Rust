@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 pub struct Controller {
-    button_combos: Vec<Vec<u64>>,
+    actions_to_buttons_bitmask_map: HashMap<usize, Vec<u8>>,
     num_buttons: usize,
-    pub num_actions: usize
+    pub num_actions: usize,
 }
 
 impl Controller {
@@ -18,21 +20,34 @@ impl Controller {
             num_actions *= combo.len();
         }
 
-        Controller { button_combos, num_buttons, num_actions }
+        let actions_to_buttons_bitmask_map: HashMap<usize, Vec<u8>> =
+            (0..num_actions)
+                .map(|i| (i, Self::compute_button_bitmask(i, &button_combos, num_buttons)))
+                .collect();
+
+        Controller { actions_to_buttons_bitmask_map, num_buttons, num_actions }
     }
 
-    pub fn get_button_bitmask(&self, mut action: usize) -> Vec<u8> {
+    fn compute_button_bitmask(
+        mut action: usize,
+        button_combos: &Vec<Vec<u64>>,
+        num_buttons: usize
+    ) -> Vec<u8> {
         let mut buttons_value: u64 = 0;
-        for combo in &self.button_combos {
+        for combo in button_combos {
             let current = action % combo.len();
             action /= combo.len();
             buttons_value |= combo[current];
         }
-        let mut buttons_bitmask = vec![0u8; self.num_buttons];
-        for i in 0..self.num_buttons {
+        let mut buttons_bitmask = vec![0u8; num_buttons];
+        for i in 0..num_buttons {
             buttons_bitmask[i] = ((buttons_value >> i) & 1) as u8;
         }
         buttons_bitmask
+    }
+
+    pub fn get_button_bitmask(&self, action: usize) -> &Vec<u8> {
+        self.actions_to_buttons_bitmask_map.get(&action).unwrap()
     }
 }
 
