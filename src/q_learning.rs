@@ -81,22 +81,24 @@ impl<B: AutodiffBackend> QLearner<B> {
         let mut policy: Policy<B> = Policy::new(&self.device, env.num_actions());
         for _ in 1..num_episodes {
             policy = self.learn_episode(env, policy);
-
-            dbg!(self.rewards.average().expect("No elements to average over"));
-            dbg!(self.iteration_count);
         }
     }
 
     pub fn learn_episode(&mut self, env: &mut RetroEnv, mut policy: Policy<B>) -> Policy<B> {
-        let mut image = env.reset();
-        let mut next_action = policy.get_next_action(image.clone(), env.num_actions(), &self.device);
+        let mut step_info = env.reset();
+        let mut image = step_info.observation;
+        let mut next_action = policy.get_next_action(
+            image.clone(),
+            env.num_actions(),
+            &self.device
+        );
 
-        while !env.is_done() {
-            let step_info = env.step(next_action);
+        while !step_info.is_done {
+            step_info = env.step(next_action);
 
-            let next_image = step_info.0;
-            let reward = step_info.1;
-            let done = step_info.2;
+            let next_image = step_info.observation;
+            let reward = step_info.reward;
+            let done = step_info.is_done;
 
             self.replay_buffer.store_transition(
                 &image,

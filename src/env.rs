@@ -9,6 +9,12 @@ use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma}
 use crate::env::controller::Controller;
 use crate::env::frame_stack::FrameStack;
 
+pub struct StepInfo {
+    pub observation: Vec<f32>,
+    pub reward: f32,
+    pub is_done: bool
+}
+
 pub struct RetroEnv {
     emu: emulator::RustRetroEmulator,
     data: gamedata::RustRetroGameData,
@@ -49,7 +55,7 @@ impl RetroEnv {
     }
 
 
-    pub fn reset(&mut self) -> Vec<f32> {
+    pub fn reset(&mut self) -> StepInfo {
         self.emu.set_start_state();
         self.data.reset();
         self.data.update_ram();
@@ -59,10 +65,14 @@ impl RetroEnv {
         let frame = self.get_screen_buffer();
         self.frame_stack.push(frame);
 
-        self.frame_stack.stacked()
+        StepInfo {
+            observation: self.frame_stack.stacked(),
+            reward: self.data.current_reward(),
+            is_done: self.is_done()
+        }
     }
 
-    pub fn step(&mut self, action: usize) -> (Vec<f32>, f32, bool) {
+    pub fn step(&mut self, action: usize) -> StepInfo {
         self.emu.set_button_mask(self.controller.get_button_bitmask(action).as_slice(), 0);
 
         let mut reward = 0.0;
@@ -75,10 +85,14 @@ impl RetroEnv {
         let frame = self.get_screen_buffer();
         self.frame_stack.push(frame);
 
-        (self.frame_stack.stacked(), reward, self.is_done())
+        StepInfo {
+            observation: self.frame_stack.stacked(),
+            reward,
+            is_done: self.is_done(),
+        }
     }
 
-    pub fn is_done(&self) -> bool { self.data.is_done() }
+    fn is_done(&self) -> bool { self.data.is_done() }
 
     fn get_screen_buffer(&self) -> Vec<f32> {
         let (buffer, w, h) = self

@@ -1,0 +1,18 @@
+[package]
+name = "CABITest"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+cc = "1.0"
+bindgen = "0.71.1"
+
+[dependencies]
+cc = "1.2.25"
+rand = "0.9.1"
+flate2 = "1.1.1"
+arraydeque = "0.5.1"
+burn = { version = "~0.20", features = ["std", "tui", "train", "vision", "wgpu", "fusion"], default-features = false }
+image = "0.25"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
