@@ -1,7 +1,8 @@
+#![recursion_limit = "256"]
+use burn::backend::{Autodiff, Wgpu};
 use std::fs::File;
 use std::io;
 use std::io::Write;
-use burn::backend::{Autodiff, Wgpu};
 use std::time::Instant;
 use crate::env::RetroEnv;
 use crate::q_learning::QLearner;

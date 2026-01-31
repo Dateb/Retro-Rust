@@ -4,7 +4,7 @@ mod gamestate;
 mod frame_stack;
 mod controller;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
 use crate::env::controller::Controller;
 use crate::env::frame_stack::FrameStack;
@@ -14,13 +14,18 @@ pub struct RetroEnv {
     data: gamedata::RustRetroGameData,
     controller: Controller,
     frame_stack: FrameStack,
-    frame_skip: usize,
+    frame_skip: u8,
 }
 
 impl RetroEnv {
-    pub fn new(game_path: String) -> Self {
-        let game_state_path = game_path.clone() + "/Level1.state";
-        let start_game_state = gamestate::GameState::new(&game_state_path).expect("Failed to load state");
+    pub fn new(game_path: String, save_state_name: &str, frame_skip: u8) -> Self {
+        let game_state_path = PathBuf::from(&game_path)
+            .join(save_state_name)
+            .to_string_lossy()
+            .to_string();
+
+        let start_game_state = gamestate::GameState::new(&game_state_path)
+            .expect("Failed to load state");
 
         let emu = emulator::RustRetroEmulator::new(start_game_state);
         let rom_path = game_path.clone() + "/rom.md";
@@ -40,7 +45,7 @@ impl RetroEnv {
 
         let frame_stack = FrameStack::new(84 * 84);
 
-        RetroEnv { emu, data, controller, frame_stack, frame_skip: 4 }
+        RetroEnv { emu, data, controller, frame_stack, frame_skip }
     }
 
 
@@ -73,9 +78,7 @@ impl RetroEnv {
         (self.frame_stack.stacked(), reward, self.is_done())
     }
 
-    pub fn is_done(&self) -> bool {
-        self.data.is_done()
-    }
+    pub fn is_done(&self) -> bool { self.data.is_done() }
 
     fn get_screen_buffer(&self) -> Vec<f32> {
         let (buffer, w, h) = self
