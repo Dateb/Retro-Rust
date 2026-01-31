@@ -18,7 +18,19 @@ pub struct LearnTimer {
 impl LearnTimer {
     pub fn new(env: RetroEnv) -> Self {
         let device = &Default::default();
-        let learner: QLearner<Backend> = QLearner::new(device, env.num_actions());
+        let learner: QLearner<Backend> = QLearner::new(
+            device,
+            env.num_actions(),
+            100_000,
+            10_000,
+            128,
+            4,
+            5_000,
+            0.99,
+            10_000_000,
+            0.001,
+            0.05
+        );
         let mut time_measurements = Vec::new();
         LearnTimer { learner, env, time_measurements }
     }

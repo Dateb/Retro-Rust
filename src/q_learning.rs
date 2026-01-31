@@ -20,23 +20,42 @@ use crate::q_learning::network_config::NetworkConfig;
 use crate::q_learning::policy::Policy;
 use crate::q_learning::utils::RollingAverage;
 
-const TARGET_UPDATE_INTERVAL: usize = 1000;
-
 pub struct QLearner<B: AutodiffBackend> {
     device: Device<B>,
     target_network: Model<B>,
     pub replay_buffer: ReplayBuffer<B>,
     optimizer: OptimizerAdaptor<Adam, Model<B>, B>,
     num_actions: usize,
+    train_frequency: usize,
+    target_update_interval: usize,
+    discount_factor: f64,
+    total_time_steps: usize,
+    exploration_fraction: f64,
+    exploration_final_epsilon: f64,
+    iteration_count: usize,
     pub rewards: RollingAverage,
-    iteration_count: usize
 }
 
 impl<B: AutodiffBackend> QLearner<B> {
-    pub fn new(device: &Device<B>, num_actions: usize) -> Self {
+    pub fn new(
+        device: &Device<B>,
+        num_actions: usize,
+        replay_buffer_capacity: usize,
+        min_samples: usize,
+        batch_size: usize,
+        train_frequency: usize,
+        target_update_interval: usize,
+        discount_factor: f64,
+        total_time_steps: usize,
+        exploration_fraction: f64,
+        exploration_final_epsilon: f64
+    ) -> Self {
         let mut target_network: Model<B> = NetworkConfig::new(num_actions, 512).init(device);
-        let capacity = 10_000;
-        let replay_buffer = ReplayBuffer::new(32, capacity, capacity);
+        let replay_buffer = ReplayBuffer::new(
+            batch_size,
+            replay_buffer_capacity,
+            min_samples
+        );
         let mut optimizer = AdamConfig::new().init();
         let rewards = RollingAverage::new();
         let mut iteration_count = 0;
@@ -47,8 +66,14 @@ impl<B: AutodiffBackend> QLearner<B> {
             replay_buffer,
             optimizer,
             num_actions,
+            train_frequency,
+            target_update_interval,
+            discount_factor,
+            total_time_steps,
+            exploration_fraction,
+            exploration_final_epsilon,
+            iteration_count,
             rewards,
-            iteration_count
         }
     }
 
@@ -83,7 +108,8 @@ impl<B: AutodiffBackend> QLearner<B> {
 
             image = next_image.clone();
 
-            next_action = match self.replay_buffer.learning_is_ready() {
+            next_action = match self.replay_buffer.learning_is_ready()
+                && self.iteration_count % self.train_frequency == 0 {
                 true => {
                     policy = self.train(policy);
                     policy.get_next_action(next_image.clone(), env.num_actions(), &self.device)
@@ -91,9 +117,10 @@ impl<B: AutodiffBackend> QLearner<B> {
                 false => rng().random_range(0..self.num_actions)
             };
 
-            if (self.iteration_count + 1) % TARGET_UPDATE_INTERVAL == 0 {
+            if (self.iteration_count + 1) % self.target_update_interval == 0 {
                 self.target_network = policy.network.clone();
             }
+
             self.iteration_count += 1;
         }
 
@@ -113,10 +140,17 @@ impl<B: AutodiffBackend> QLearner<B> {
             retro_batch.dones,
             &policy.network,
             &self.target_network,
-            0.99,
+            self.discount_factor,
         );
 
-        policy.update(loss, &mut self.optimizer)
+        policy.update(
+            loss,
+            &mut self.optimizer,
+            self.iteration_count as f64,
+            self.total_time_steps as f64,
+            self.exploration_fraction,
+            self.exploration_final_epsilon
+        )
     }
 
     fn forward_regression(
@@ -128,7 +162,7 @@ impl<B: AutodiffBackend> QLearner<B> {
         dones: Tensor<B, 1, Float>,
         behavior_network: &Model<B>,
         target_network: &Model<B>,
-        gamma: f64,
+        discount_factor: f64,
     ) -> Tensor<B, 1> {
         // Q(s, a)
         let q_values_all: Tensor<B, 2> = behavior_network.forward(images);
@@ -138,7 +172,7 @@ impl<B: AutodiffBackend> QLearner<B> {
         let next_q_values_all = target_network.forward(next_images);
         let next_q_values: Tensor<B, 1> = next_q_values_all.max_dim(1).squeeze();
 
-        let target_q = rewards + gamma * next_q_values.mul(1.0 - dones);
+        let target_q = rewards + discount_factor * next_q_values.mul(1.0 - dones);
 
         MseLoss::new().forward(q_values, target_q.detach(), Reduction::Mean)
     }

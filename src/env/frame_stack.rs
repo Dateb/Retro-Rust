@@ -25,8 +25,6 @@ impl FrameStack {
 
 impl FrameStack {
     pub fn push(&mut self, frame: Vec<f32>) {
-
-        debug_assert_eq!(frame.len(), self.frame_size);
         self.frames.push_back(frame);
     }
 
