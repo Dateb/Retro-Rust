@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use std::os::raw::c_char;
-use crate::env::emulator::{RetroEmulator, RustRetroEmulator};
+use crate::environments::image_retro_env::emulator::{RetroEmulator, RustRetroEmulator};
 
 #[repr(C)]
 pub struct RetroMovie {

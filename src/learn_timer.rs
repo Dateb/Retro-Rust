@@ -3,24 +3,23 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::time::Instant;
-use crate::env::RetroEnv;
 use crate::q_learning::QLearner;
 use crate::q_learning::policy::Policy;
+use crate::traits::retro_env::RetroEnv;
 
 type Backend = Autodiff<Wgpu>;
 
 pub struct LearnTimer {
     learner: QLearner<Backend>,
-    env: RetroEnv,
     time_measurements: Vec<(u64, f32)>
 }
 
 impl LearnTimer {
-    pub fn new(env: RetroEnv) -> Self {
+    pub fn new(num_actions: usize) -> Self {
         let device = &Default::default();
         let learner: QLearner<Backend> = QLearner::new(
             device,
-            env.num_actions(),
+            num_actions,
             100_000,
             10_000,
             128,
@@ -32,16 +31,16 @@ impl LearnTimer {
             0.02
         );
         let time_measurements = Vec::new();
-        LearnTimer { learner, env, time_measurements }
+        LearnTimer { learner, time_measurements }
     }
 
-    pub fn run_and_write(&mut self, max_episodes: usize) {
+    pub fn run_and_write(&mut self, env: &mut dyn RetroEnv, max_episodes: usize) {
         let device = &Default::default();
-        let mut policy: Policy<Backend> = Policy::new(device, self.env.num_actions());
+        let mut policy: Policy<Backend> = Policy::new(device, env.num_actions());
         let start_time = Instant::now();
 
         for _ in 0..max_episodes {
-            policy = self.learner.learn_episode(&mut self.env, policy);
+            policy = self.learner.learn_episode(env, policy);
 
             let time_measurement = (start_time.elapsed().as_secs(), self.learner.rewards.average().unwrap());
 

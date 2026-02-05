@@ -1,8 +1,8 @@
 use std::ffi::CString;
 use std::fs;
-use crate::env::gamedata::RetroGameData;
-use crate::env::gamedata::RustRetroGameData;
-use crate::env::gamestate::GameState;
+use crate::environments::image_retro_env::gamedata::RetroGameData;
+use crate::environments::image_retro_env::gamedata::RustRetroGameData;
+use crate::environments::image_retro_env::gamestate::GameState;
 
 #[repr(C)]
 pub struct RetroEmulator {

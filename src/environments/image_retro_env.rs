@@ -1,35 +1,27 @@
-mod emulator;
+pub(crate) mod emulator;
 mod gamedata;
 mod gamestate;
 mod frame_stack;
 mod controller;
-mod movie;
 
 use std::path::{Path, PathBuf};
-use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
-use crate::env::controller::Controller;
-use crate::env::emulator::RustRetroEmulator;
-use crate::env::frame_stack::FrameStack;
-use crate::env::gamedata::RustRetroGameData;
-use crate::env::gamestate::GameState;
-use crate::env::movie::RustRetroMovie;
+use image::{imageops::resize, imageops::FilterType, ImageBuffer, Luma, RgbImage};
+use crate::environments::image_retro_env::controller::Controller;
+use crate::environments::image_retro_env::emulator::RustRetroEmulator;
+use crate::environments::image_retro_env::frame_stack::FrameStack;
+use crate::environments::image_retro_env::gamedata::RustRetroGameData;
+use crate::environments::image_retro_env::gamestate::GameState;
+use crate::traits::retro_env::{RetroEnv, StepInfo};
 
-pub struct StepInfo {
-    pub observation: Vec<f32>,
-    pub reward: f32,
-    pub is_done: bool
-}
-
-pub struct RetroEnv {
-    emu: RustRetroEmulator,
+pub struct ImageRetroEnv {
+    pub emu: RustRetroEmulator,
     data: RustRetroGameData,
-    movie: RustRetroMovie,
     controller: Controller,
     frame_stack: FrameStack,
-    frame_skip: u8,
+    pub frame_skip: u8,
 }
 
-impl RetroEnv {
+impl ImageRetroEnv {
     pub fn new(game_path: String, save_state_name: &str, frame_skip: u8) -> Self {
         let game_state_path = PathBuf::from(&game_path)
             .join(save_state_name)
@@ -57,58 +49,18 @@ impl RetroEnv {
 
         let frame_stack = FrameStack::new(84 * 84);
 
-        let movie = RustRetroMovie::new(
-            &mut emu,
-            String::from("yellow.bk2"),
-            String::from("Airstriker-Genesis")
-        );
-        RetroEnv { emu, data, movie, controller, frame_stack, frame_skip }
+        ImageRetroEnv { emu, data, controller, frame_stack, frame_skip }
     }
 
-
-    pub fn reset(&mut self) -> StepInfo {
-        self.emu.set_start_state();
-
-        self.movie.close();
-        self.movie = RustRetroMovie::new(
-            &mut self.emu,
-            String::from("yellow.bk2"),
-            String::from("Airstriker-Genesis")
-        );
-
+    pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {
+        self.emu.set_button_mask(button_bit_mask.as_slice(), 0);
         self.emu.step();
-        self.movie.step();
-        self.data.reset();
         self.data.update_ram();
 
-        self.frame_stack.clear();
-        let frame = self.get_screen_buffer();
-        self.frame_stack.push(frame);
-
-        StepInfo {
-            observation: self.frame_stack.stacked(),
-            reward: self.data.current_reward(),
-            is_done: self.is_done()
-        }
+        self.data.current_reward()
     }
 
-    pub fn step(&mut self, action: usize) -> StepInfo {
-        let button_bit_mask = self.controller.get_button_bitmask(action);
-
-        let mut reward = 0.0;
-        for _ in 0..self.frame_skip {
-            for (idx, value) in button_bit_mask.iter().enumerate() {
-                self.movie.set_key(idx, *value == 1);
-            }
-
-            self.emu.set_button_mask(button_bit_mask.as_slice(), 0);
-
-            self.movie.step();
-            self.emu.step();
-            self.data.update_ram();
-            reward += self.data.current_reward();
-        }
-
+    pub fn step_current_frame(&mut self, reward: f32) -> StepInfo {
         let frame = self.get_screen_buffer();
         self.frame_stack.push(frame);
 
@@ -127,7 +79,7 @@ impl RetroEnv {
             .get_screen()
             .expect("Screen not available");
 
-        RetroEnv::preprocess_screen(buffer, w, h)
+        ImageRetroEnv::preprocess_screen(buffer, w, h)
     }
 
     fn preprocess_screen(buffer: Vec<u8>, w: i32, h: i32) -> Vec<f32> {
@@ -158,5 +110,40 @@ impl RetroEnv {
         self.data.total_reward()
     }
 
-    pub fn num_actions(&self) -> usize { self.controller.num_actions }
+    pub fn get_button_bitmask(&self, action: usize) -> &Vec<u8> {
+        self.controller.get_button_bitmask(action)
+    }
+}
+
+impl RetroEnv for ImageRetroEnv {
+    fn step(&mut self, action: usize) -> StepInfo {
+        let button_bit_mask = self.get_button_bitmask(action);
+
+        let mut reward = 0.0;
+        for _ in 0..self.frame_skip {
+            reward += self.skipped_frame_step(button_bit_mask)
+        }
+
+        self.step_current_frame(reward)
+    }
+
+    fn reset(&mut self) -> StepInfo {
+        self.emu.set_start_state();
+
+        self.emu.step();
+        self.data.reset();
+        self.data.update_ram();
+
+        self.frame_stack.clear();
+        let frame = self.get_screen_buffer();
+        self.frame_stack.push(frame);
+
+        StepInfo {
+            observation: self.frame_stack.stacked(),
+            reward: self.data.current_reward(),
+            is_done: self.is_done()
+        }
+    }
+
+    fn num_actions(&self) -> usize { self.controller.num_actions }
 }

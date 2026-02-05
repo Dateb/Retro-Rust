@@ -10,13 +10,14 @@ use crate::q_learning::network_config::NetworkConfig;
 pub struct Policy<B: Backend> {
     pub network: Model<B>,
     exploration_rate: f64,
-    lr: f64
+    lr: f64,
+    num_actions: usize
 }
 
 impl<B: Backend + AutodiffBackend> Policy<B> {
     pub fn new(device: &Device<B>, num_actions: usize) -> Self {
         let network = NetworkConfig::new(num_actions, 512).init(device);
-        Policy { network, exploration_rate: 1.0, lr: 1e-4 }
+        Policy { network, exploration_rate: 1.0, lr: 1e-4, num_actions }
     }
 
     pub fn update(
@@ -38,16 +39,15 @@ impl<B: Backend + AutodiffBackend> Policy<B> {
 
         let exploration_rate = 1.0 + progress * (exploration_final_epsilon - 1.0);
 
-        Policy { network: policy_network, exploration_rate, lr: 1e-4 }
+        Policy { network: policy_network, exploration_rate, lr: 1e-4, num_actions: self.num_actions }
     }
 
     pub fn get_next_action(
         &self, image: Vec<f32>,
-        num_actions: usize,
         device: &Device<B>
     ) -> usize {
         match rng().random_range(0.0..1.0) < self.exploration_rate {
-            true => rng().random_range(0..num_actions),
+            true => rng().random_range(0..self.num_actions),
             false => self.predict_action(image, device)
         }
     }

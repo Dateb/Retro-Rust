@@ -13,11 +13,11 @@ use burn::prelude::{Float, Int};
 use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Device;
-use crate::env::RetroEnv;
 use crate::q_learning::model::Model;
 use crate::q_learning::network_config::NetworkConfig;
 use crate::q_learning::policy::Policy;
 use crate::q_learning::utils::RollingAverage;
+use crate::traits::retro_env::RetroEnv;
 
 pub struct QLearner<B: AutodiffBackend> {
     device: Device<B>,
@@ -76,14 +76,15 @@ impl<B: AutodiffBackend> QLearner<B> {
         }
     }
 
-    pub fn learn_episode(&mut self, env: &mut RetroEnv, mut policy: Policy<B>) -> Policy<B> {
+    pub fn learn_episode(&mut self, env: &mut dyn RetroEnv, mut policy: Policy<B>) -> Policy<B> {
         let mut step_info = env.reset();
         let mut image = step_info.observation;
         let mut next_action = policy.get_next_action(
             image.clone(),
-            env.num_actions(),
             &self.device
         );
+
+        let mut episode_reward = 0.0;
 
         while !step_info.is_done {
             step_info = env.step(next_action);
@@ -106,7 +107,7 @@ impl<B: AutodiffBackend> QLearner<B> {
                 && self.iteration_count % self.train_frequency == 0 {
                 true => {
                     policy = self.train(policy);
-                    policy.get_next_action(next_image.clone(), env.num_actions(), &self.device)
+                    policy.get_next_action(next_image.clone(), &self.device)
                 },
                 false => rng().random_range(0..self.num_actions)
             };
@@ -115,10 +116,11 @@ impl<B: AutodiffBackend> QLearner<B> {
                 self.target_network = policy.network.clone();
             }
 
+            episode_reward += step_info.reward;
             self.iteration_count += 1;
         }
 
-        self.rewards.push(env.episode_reward());
+        self.rewards.push(episode_reward);
 
         policy
     }
