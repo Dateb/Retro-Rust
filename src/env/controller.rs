@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 pub struct Controller {
     actions_to_buttons_bitmask_map: HashMap<usize, Vec<u8>>,
-    num_buttons: usize,
     pub num_actions: usize,
 }
 
@@ -25,7 +24,7 @@ impl Controller {
                 .map(|i| (i, Self::compute_button_bitmask(i, &button_combos, num_buttons)))
                 .collect();
 
-        Controller { actions_to_buttons_bitmask_map, num_buttons, num_actions }
+        Controller { actions_to_buttons_bitmask_map, num_actions }
     }
 
     fn compute_button_bitmask(

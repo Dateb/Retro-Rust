@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,8 @@ void emulator_set_button_mask(RetroEmulator* h, const uint8_t* mask, size_t num_
 void emulator_set_key(RetroEmulator* h, int port, int key, bool active);
 void emulator_configure_data(RetroEmulator* h, RetroGameData* data);
 bool load_core_info(const char* json);
+
+std::string emulator_get_core(RetroEmulator* handle);
 
 #ifdef __cplusplus
 }

@@ -10,13 +10,10 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(path: &str) -> io::Result<Self> {
-        // Open the file
         let file = File::open(path)?;
 
-        // Wrap in a GzDecoder
         let mut gz = GzDecoder::new(BufReader::new(file));
 
-        // Read all bytes
         let mut buffer = Vec::new();
         gz.read_to_end(&mut buffer)?;
 

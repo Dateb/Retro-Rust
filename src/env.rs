@@ -3,11 +3,16 @@ mod gamedata;
 mod gamestate;
 mod frame_stack;
 mod controller;
+mod movie;
 
 use std::path::{Path, PathBuf};
 use image::{ImageBuffer, RgbImage, imageops::resize, imageops::FilterType, Luma};
 use crate::env::controller::Controller;
+use crate::env::emulator::RustRetroEmulator;
 use crate::env::frame_stack::FrameStack;
+use crate::env::gamedata::RustRetroGameData;
+use crate::env::gamestate::GameState;
+use crate::env::movie::RustRetroMovie;
 
 pub struct StepInfo {
     pub observation: Vec<f32>,
@@ -16,8 +21,9 @@ pub struct StepInfo {
 }
 
 pub struct RetroEnv {
-    emu: emulator::RustRetroEmulator,
-    data: gamedata::RustRetroGameData,
+    emu: RustRetroEmulator,
+    data: RustRetroGameData,
+    movie: RustRetroMovie,
     controller: Controller,
     frame_stack: FrameStack,
     frame_skip: u8,
@@ -30,10 +36,10 @@ impl RetroEnv {
             .to_string_lossy()
             .to_string();
 
-        let start_game_state = gamestate::GameState::new(&game_state_path)
+        let start_game_state = GameState::new(&game_state_path)
             .expect("Failed to load state");
 
-        let emu = emulator::RustRetroEmulator::new(start_game_state);
+        let mut emu = RustRetroEmulator::new(start_game_state);
         let rom_path = game_path.clone() + "/rom.md";
 
         let rom_path = Path::new(&rom_path)
@@ -44,22 +50,36 @@ impl RetroEnv {
             panic!("Failed to load ROM");
         }
 
-        let data = gamedata::RustRetroGameData::new(game_path);
+        let data = RustRetroGameData::new(game_path);
         emu.configure_data(&data);
 
         let controller = Controller::new(data.get_button_combos());
 
         let frame_stack = FrameStack::new(84 * 84);
 
-        RetroEnv { emu, data, controller, frame_stack, frame_skip }
+        let movie = RustRetroMovie::new(
+            &mut emu,
+            String::from("yellow.bk2"),
+            String::from("Airstriker-Genesis")
+        );
+        RetroEnv { emu, data, movie, controller, frame_stack, frame_skip }
     }
 
 
     pub fn reset(&mut self) -> StepInfo {
         self.emu.set_start_state();
+
+        self.movie.close();
+        self.movie = RustRetroMovie::new(
+            &mut self.emu,
+            String::from("yellow.bk2"),
+            String::from("Airstriker-Genesis")
+        );
+
+        self.emu.step();
+        self.movie.step();
         self.data.reset();
         self.data.update_ram();
-        self.emu.step();
 
         self.frame_stack.clear();
         let frame = self.get_screen_buffer();
@@ -73,10 +93,17 @@ impl RetroEnv {
     }
 
     pub fn step(&mut self, action: usize) -> StepInfo {
-        self.emu.set_button_mask(self.controller.get_button_bitmask(action).as_slice(), 0);
+        let button_bit_mask = self.controller.get_button_bitmask(action);
 
         let mut reward = 0.0;
         for _ in 0..self.frame_skip {
+            for (idx, value) in button_bit_mask.iter().enumerate() {
+                self.movie.set_key(idx, *value == 1);
+            }
+
+            self.emu.set_button_mask(button_bit_mask.as_slice(), 0);
+
+            self.movie.step();
             self.emu.step();
             self.data.update_ram();
             reward += self.data.current_reward();

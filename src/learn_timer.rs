@@ -1,4 +1,3 @@
-#![recursion_limit = "256"]
 use burn::backend::{Autodiff, Wgpu};
 use std::fs::File;
 use std::io;
@@ -30,9 +29,9 @@ impl LearnTimer {
             0.99,
             10_000_000,
             0.001,
-            0.05
+            0.02
         );
-        let mut time_measurements = Vec::new();
+        let time_measurements = Vec::new();
         LearnTimer { learner, env, time_measurements }
     }
 

@@ -5,7 +5,9 @@ use crate::env::gamedata::RustRetroGameData;
 use crate::env::gamestate::GameState;
 
 #[repr(C)]
-pub struct RetroEmulator;
+pub struct RetroEmulator {
+    _unused: [u8; 0]
+}
 
 unsafe extern "C" {
     fn emulator_new() -> *mut RetroEmulator;
@@ -35,8 +37,8 @@ unsafe extern "C" {
 
 #[derive(Debug)]
 pub struct RustRetroEmulator {
-    retro_emulator: *mut RetroEmulator,
-    start_game_state: GameState
+    pub retro_emulator: *mut RetroEmulator,
+    pub start_game_state: GameState
 }
 
 impl RustRetroEmulator {

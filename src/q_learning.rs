@@ -4,13 +4,12 @@ pub mod model;
 mod utils;
 pub mod policy;
 
-use burn::module::AutodiffModule;
 use burn::nn::loss::{MseLoss, Reduction};
-use burn::optim::{Adam, AdamConfig, GradientsParams, Optimizer};
+use burn::optim::{Adam, AdamConfig};
 use burn::optim::adaptor::OptimizerAdaptor;
 use rand::{rng, Rng};
 use crate::q_learning::replay_buffer::ReplayBuffer;
-use burn::prelude::{Float, Int, TensorData, ToElement};
+use burn::prelude::{Float, Int};
 use burn::Tensor;
 use burn::tensor::backend::AutodiffBackend;
 use burn::tensor::Device;
@@ -50,15 +49,15 @@ impl<B: AutodiffBackend> QLearner<B> {
         exploration_fraction: f64,
         exploration_final_epsilon: f64
     ) -> Self {
-        let mut target_network: Model<B> = NetworkConfig::new(num_actions, 512).init(device);
+        let target_network: Model<B> = NetworkConfig::new(num_actions, 512).init(device);
         let replay_buffer = ReplayBuffer::new(
             batch_size,
             replay_buffer_capacity,
             min_samples
         );
-        let mut optimizer = AdamConfig::new().init();
+        let optimizer = AdamConfig::new().init();
         let rewards = RollingAverage::new();
-        let mut iteration_count = 0;
+        let iteration_count = 0;
 
         QLearner {
             device: device.clone(),
@@ -74,13 +73,6 @@ impl<B: AutodiffBackend> QLearner<B> {
             exploration_final_epsilon,
             iteration_count,
             rewards,
-        }
-    }
-
-    pub fn learn(&mut self, env: &mut RetroEnv, num_episodes: usize) {
-        let mut policy: Policy<B> = Policy::new(&self.device, env.num_actions());
-        for _ in 1..num_episodes {
-            policy = self.learn_episode(env, policy);
         }
     }
 
@@ -132,7 +124,7 @@ impl<B: AutodiffBackend> QLearner<B> {
     }
 
     fn train(&mut self, policy: Policy<B>) -> Policy<B> {
-        let retro_batch = self.replay_buffer.sample(32, &self.device);
+        let retro_batch = self.replay_buffer.sample(&self.device);
 
         let loss = self.forward_regression(
             retro_batch.images,

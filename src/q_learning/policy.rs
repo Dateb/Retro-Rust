@@ -1,4 +1,3 @@
-use std::cmp;
 use burn::optim::{Adam, GradientsParams, Optimizer};
 use burn::optim::adaptor::OptimizerAdaptor;
 use burn::prelude::{Backend, Device, TensorData, ToElement};

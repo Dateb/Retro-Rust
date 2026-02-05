@@ -1,8 +1,11 @@
 use std::ffi::CString;
 use std::path::Path;
+use std::os::raw::c_char;
 
 #[repr(C)]
-pub struct RetroGameData;
+pub struct RetroGameData {
+    _unused: [u8; 0]
+}
 
 #[repr(C)]
 struct RetroActionSet {
@@ -15,8 +18,8 @@ unsafe extern "C" {
     fn gamedata_new() -> *mut RetroGameData;
     fn gamedata_load(
         gamedata: *mut RetroGameData,
-        data_path: *const std::os::raw::c_char,
-        scenario_path: *const std::os::raw::c_char
+        data_path: *const c_char,
+        scenario_path: *const c_char
     ) -> bool;
     fn gamedata_reset(gamedata: *mut RetroGameData);
     fn gamedata_valid_actions(

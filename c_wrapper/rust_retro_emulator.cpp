@@ -91,3 +91,9 @@ bool load_core_info(const char* json) {
 void emulator_configure_data(RetroEmulator* h, RetroGameData* data) {
     h->emulator->configureData(data->data);
 }
+
+std::string emulator_get_core(RetroEmulator* handle) {
+    return handle->emulator->core();
+}
+
+

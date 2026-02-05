@@ -77,11 +77,11 @@ impl<B: Backend> ReplayBuffer<B> {
         }
     }
 
-    pub fn sample(&self, batch_size: usize, device: &Device<B>) -> RetroBatch<B> {
+    pub fn sample(&self, device: &Device<B>) -> RetroBatch<B> {
         let mut rng = rand::rng();
-        let indices = sample(&mut rng, self.len, batch_size);
+        let indices = sample(&mut rng, self.len, self.batch_size);
 
-        let mut batch_images = Vec::with_capacity(batch_size * IMAGE_SIZE);
+        let mut batch_images = Vec::with_capacity(self.batch_size * IMAGE_SIZE);
 
         for i in indices.iter() {
             let start = i * IMAGE_SIZE;
@@ -92,7 +92,7 @@ impl<B: Backend> ReplayBuffer<B> {
         let images: Tensor<B, 4> = Tensor::<B, 4>::from_data(
             TensorData::new(
                 batch_images, // Vec<f32>, already flattened
-                [batch_size, 4, 84, 84],
+                [self.batch_size, 4, 84, 84],
             ),
             &device,
         );
@@ -107,7 +107,7 @@ impl<B: Backend> ReplayBuffer<B> {
             &device,
         );
 
-        let mut batch_images = Vec::with_capacity(batch_size * IMAGE_SIZE);
+        let mut batch_images = Vec::with_capacity(self.batch_size * IMAGE_SIZE);
 
         for i in indices.iter() {
             let start = i * IMAGE_SIZE;
@@ -118,7 +118,7 @@ impl<B: Backend> ReplayBuffer<B> {
         let next_images: Tensor<B, 4> = Tensor::<B, 4>::from_data(
             TensorData::new(
                 batch_images,
-                [batch_size, 4, 84, 84],
+                [self.batch_size, 4, 84, 84],
             ),
             &device,
         );
