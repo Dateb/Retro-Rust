@@ -1,22 +1,28 @@
-# Retro Rust - An [OpenAI Retro](https://github.com/openai/retro) API written in Rust
+<p align="center">
+  <img src="images/logo.png" width="280">
+</p>
 
-This repository provides rust native API support for the well known
-retro games environment zoo; allowing blazingly fast rust models to
-learn games on Super Nintendo, Game boy and many more platforms.
+<p align="center">
+  An <a href="https://github.com/openai/retro">OpenAI Retro</a> API written in Rust
+</p>
+
+## In a nutshell
+
+- Retro game emulator environments designed for reinforcement learning experiments.
+- Support for classic games like *Super Mario World* and *Donkey Kong*.
+- Written in Rust to unlock low-latency simulation and efficient training with native Rust-based machine learning models.
+
 
 ## Getting started
 
 A simple starting point may look like this:
 
-    let game_path = var("RETRO_GAME_PATH")
-        .expect("RETRO_GAME_PATH environment variable not set");
-
-    let save_state_name = var("SAVE_STATE_NAME")
-        .expect("SAVE_STATE_NAME environment variable not set");
-
+    let game_name = "Airstriker";
+    let platform = Platform::Genesis;
+    let save_state_name = String::from("Level1.state");
     let frame_skip = 4;
 
-    let env = RetroEnv::new(game_path, &save_state_name, frame_skip);
+    let env = ImageRetroEnv::new(game_name, platform, save_state_name, frame_skip);
 
     let policy = ... // Initialise your policy
 
@@ -78,7 +84,6 @@ Network architecture: Standard DQN with CNN, see [Mnih et al., 2015](https://arx
 From top to bottom in priority, the following features are planned
 to be added soon:
 
-- Gameplay video recorder
 - Vectorized environment support
 - Parallelized step rollouts
 - RAM based observations

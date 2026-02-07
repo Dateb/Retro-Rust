@@ -1,8 +1,9 @@
-pub(crate) mod emulator;
+pub mod emulator;
 mod gamedata;
 mod gamestate;
 mod frame_stack;
 mod controller;
+pub mod platform;
 
 use std::path::{Path, PathBuf};
 use image::{imageops::resize, imageops::FilterType, ImageBuffer, Luma, RgbImage};
@@ -11,9 +12,11 @@ use crate::environments::image_retro_env::emulator::RustRetroEmulator;
 use crate::environments::image_retro_env::frame_stack::FrameStack;
 use crate::environments::image_retro_env::gamedata::RustRetroGameData;
 use crate::environments::image_retro_env::gamestate::GameState;
+use crate::environments::image_retro_env::platform::Platform;
 use crate::traits::retro_env::{RetroEnv, StepInfo};
 
 pub struct ImageRetroEnv {
+    pub game_name: String,
     pub emu: RustRetroEmulator,
     data: RustRetroGameData,
     controller: Controller,
@@ -22,7 +25,11 @@ pub struct ImageRetroEnv {
 }
 
 impl ImageRetroEnv {
-    pub fn new(game_path: String, save_state_name: &str, frame_skip: u8) -> Self {
+    pub fn new(game_name: &str, platform: Platform, save_state_name: String, frame_skip: u8) -> Self {
+        let mut game_path = PathBuf::from("games");
+        let game_dir = format!("{game_name}-{platform}");
+        game_path.push(game_dir);
+
         let game_state_path = PathBuf::from(&game_path)
             .join(save_state_name)
             .to_string_lossy()
@@ -32,7 +39,8 @@ impl ImageRetroEnv {
             .expect("Failed to load state");
 
         let mut emu = RustRetroEmulator::new(start_game_state);
-        let rom_path = game_path.clone() + "/rom.md";
+        let mut rom_path = game_path.clone();
+        rom_path.push(platform.rom_name());
 
         let rom_path = Path::new(&rom_path)
             .canonicalize()
@@ -42,14 +50,14 @@ impl ImageRetroEnv {
             panic!("Failed to load ROM");
         }
 
-        let data = RustRetroGameData::new(game_path);
+        let data = RustRetroGameData::new(game_path.to_string_lossy().to_string());
         emu.configure_data(&data);
 
         let controller = Controller::new(data.get_button_combos());
 
         let frame_stack = FrameStack::new(84 * 84);
 
-        ImageRetroEnv { emu, data, controller, frame_stack, frame_skip }
+        ImageRetroEnv { game_name: game_name.to_string(), emu, data, controller, frame_stack, frame_skip }
     }
 
     pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {

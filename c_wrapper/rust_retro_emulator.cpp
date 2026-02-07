@@ -75,10 +75,6 @@ void emulator_set_button_mask(RetroEmulator* h, const uint8_t* mask, size_t num_
     if (!h || !h->emulator) return;
     if (!mask) return;
 
-    // Optional: bounds checks if you have constants
-    // if (num_buttons > N_BUTTONS) return;
-    // if (player >= MAX_PLAYERS) return;
-
     for (size_t key = 0; key < num_buttons; ++key) {
         h->emulator->setKey(player, (int)key, mask[key] != 0);
     }

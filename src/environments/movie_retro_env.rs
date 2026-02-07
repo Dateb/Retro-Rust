@@ -13,8 +13,8 @@ impl MovieRetroEnv {
     pub fn new(mut image_env: ImageRetroEnv) -> Self {
         let movie = RustRetroMovie::new(
             &mut image_env.emu,
-            String::from("yellow.bk2"),
-            String::from("Airstriker-Genesis")
+            String::from("movie.bk2"),
+            String::from(image_env.game_name.clone())
         );
 
         Self { image_env, movie }
@@ -43,8 +43,8 @@ impl RetroEnv for MovieRetroEnv {
         self.movie.close();
         self.movie = RustRetroMovie::new(
             &mut self.image_env.emu,
-            String::from("yellow.bk2"),
-            String::from("Airstriker-Genesis")
+            String::from("movie.bk2"),
+            String::from(self.image_env.game_name.clone())
         );
 
         self.movie.step();
