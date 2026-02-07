@@ -12,6 +12,18 @@ pub enum Platform {
 }
 
 impl Platform {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Platform::Atari => "Atari",
+            Platform::GB => "GB",
+            Platform::GBA => "GBA",
+            Platform::NES => "NES",
+            Platform::SNES => "SNES",
+            Platform::Genesis => "Genesis",
+            Platform::PCE => "PCE",
+        }
+    }
+
     pub fn rom_name(&self) -> &'static str {
         match self {
             Platform::Atari => "rom.a26",
@@ -22,20 +34,5 @@ impl Platform {
             Platform::Genesis => "rom.md",
             Platform::PCE => "rom.pce"
         }
-    }
-}
-
-impl Display for Platform {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Platform::Atari => "Atari",
-            Platform::GB => "GB",
-            Platform::GBA => "GBA",
-            Platform::NES => "NES",
-            Platform::SNES => "SNES",
-            Platform::Genesis => "Genesis",
-            Platform::PCE => "PCE"
-        };
-        write!(f, "{}", s)
     }
 }

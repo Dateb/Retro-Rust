@@ -27,7 +27,8 @@ pub struct ImageRetroEnv {
 impl ImageRetroEnv {
     pub fn new(game_name: &str, platform: Platform, save_state_name: String, frame_skip: u8) -> Self {
         let mut game_path = PathBuf::from("games");
-        let game_dir = format!("{game_name}-{platform}");
+        let platform_name = platform.as_str();
+        let game_dir = format!("{game_name}-{platform_name}");
         game_path.push(game_dir);
 
         let game_state_path = PathBuf::from(&game_path)
@@ -38,7 +39,7 @@ impl ImageRetroEnv {
         let start_game_state = GameState::new(&game_state_path)
             .expect("Failed to load state");
 
-        let mut emu = RustRetroEmulator::new(start_game_state);
+        let mut emu = RustRetroEmulator::new(&platform, start_game_state);
         let mut rom_path = game_path.clone();
         rom_path.push(platform.rom_name());
 

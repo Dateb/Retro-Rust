@@ -3,14 +3,27 @@
 </p>
 
 <p align="center">
-  An <a href="https://github.com/openai/retro">OpenAI Retro</a> API written in Rust
+  A rust-based <a href="https://github.com/openai/retro">Gym Retro</a> API
 </p>
 
-## In a nutshell
+# Retro Rust
 
 - Retro game emulator environments designed for reinforcement learning experiments.
-- Support for classic games like *Super Mario World* and *Donkey Kong*.
-- Written in Rust to unlock low-latency simulation and efficient training with native Rust-based machine learning models.
+- Support for classic games like *Super Mario World* and *Donkey Kong*:
+
+<p align="center">
+  <img src="images/demo.gif" width="220" style="margin-right: 20px;">
+</p>
+
+- <ul style="list-style: none; padding-left: 0;">
+      <li>Designed for native Rust ML workflows:</li>
+      <ul style="list-style: none; padding-left: 1em;">
+        <li>➜ Ultra-fast training loops</li>
+        <li>➜ Zero Python/C++ bindings</li>
+      </ul>
+  </ul>
+
+
 
 
 ## Getting started
