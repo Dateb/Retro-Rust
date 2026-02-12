@@ -26,12 +26,13 @@ pub struct ImageRetroEnv {
 
 impl ImageRetroEnv {
     pub fn new(game_name: &str, platform: Platform, save_state_name: String, frame_skip: u8) -> Self {
-        let mut game_path = PathBuf::from("games");
+        let mut game_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("games");
+
         let platform_name = platform.as_str();
         let game_dir = format!("{game_name}-{platform_name}");
         game_path.push(game_dir);
 
-        let game_state_path = PathBuf::from(&game_path)
+        let game_state_path = game_path
             .join(save_state_name)
             .to_string_lossy()
             .to_string();
@@ -43,11 +44,11 @@ impl ImageRetroEnv {
         let mut rom_path = game_path.clone();
         rom_path.push(platform.rom_name());
 
-        let rom_path = Path::new(&rom_path)
-            .canonicalize()
-            .expect("ROM path not found");
+        let rom_path = rom_path
+            .to_string_lossy()
+            .to_string();
 
-        if !emu.load_rom(rom_path.to_str().unwrap()) {
+        if !emu.load_rom(&rom_path) {
             panic!("Failed to load ROM");
         }
 

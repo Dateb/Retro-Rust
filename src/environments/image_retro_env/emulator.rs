@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use std::fs;
+use std::path::PathBuf;
 use crate::environments::image_retro_env::gamedata::RetroGameData;
 use crate::environments::image_retro_env::gamedata::RustRetroGameData;
 use crate::environments::image_retro_env::gamestate::GameState;
@@ -45,7 +46,13 @@ pub struct RustRetroEmulator {
 impl RustRetroEmulator {
     pub fn new(platform: &Platform, start_game_state: GameState) -> Self {
         let platform_name = platform.as_str().to_lowercase();
-        let json_str = fs::read_to_string(format!("{}{}{}", {"cores/"},{platform_name},{".json"})).unwrap();
+
+        let json_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cores")
+            .join("info")
+            .join(format!("{platform_name}.json"));
+        let json_str = fs::read_to_string(&json_path).unwrap();
+
         let json_str_c = CString::new(json_str).expect("CString::new failed");
         unsafe {
             load_core_info(json_str_c.as_ptr());

@@ -46,5 +46,6 @@ fn main() {
         .file("c_wrapper/rust_retro_movie.cpp")
         .include("includes")
         .include(&libzip_include)
+        .flag_if_supported("-std=c++17")
         .compile("rust_retro");
 }
