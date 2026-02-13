@@ -30,29 +30,40 @@
 
 A simple starting point may look like this:
 
+    use retro_rust::environments::image_retro_env::ImageRetroEnv;
+    use retro_rust::environments::image_retro_env::platform::Platform;
+    use retro_rust::traits::retro_env::RetroEnv;
+
+    pub fn main() {
+    // A training scenario is defined by a (game, platform, save_state) triple
     let game_name = "Airstriker";
     let platform = Platform::Genesis;
     let save_state_name = String::from("Level1.state");
-    let frame_skip = 4;
 
-    let env = ImageRetroEnv::new(game_name, platform, save_state_name, frame_skip);
+    let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
 
-    let policy = ... // Initialise your policy
+    // Use this function signature for your policy
+    let policy = |_obs: Vec<f32>| -> usize { 0 };
 
+    let num_episodes = 100;
     for _ in 1..num_episodes {
         let mut step_info = env.reset();
-        let mut image = step_info.observation;
-        let mut next_action = policy.get_next_action(image, env.num_actions(), &self.device);
+        let mut next_image = step_info.observation;
+        let mut next_action = policy(next_image);
 
-        while !step_info.is_done() {
+        let mut episode_reward = step_info.reward;
+
+        // Action-Feedback loop for one episode
+        while !step_info.is_done {
             step_info = env.step(next_action);
 
-            let next_image = step_info.observation;
-            let reward = step_info.reward;
-            let done = step_info.is_done;
+            next_image = step_info.observation;
+            episode_reward += step_info.reward;
 
-            // Do something with env feedback
+            next_action = policy(next_image);
         }
+        println!("Episode reward: {}", episode_reward);
+      }
     }
 
 ## Environment Overview

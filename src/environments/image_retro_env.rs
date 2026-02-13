@@ -5,7 +5,7 @@ mod frame_stack;
 mod controller;
 pub mod platform;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use image::{imageops::resize, imageops::FilterType, ImageBuffer, Luma, RgbImage};
 use crate::environments::image_retro_env::controller::Controller;
 use crate::environments::image_retro_env::emulator::RustRetroEmulator;
@@ -37,7 +37,7 @@ impl ImageRetroEnv {
         let start_save_state = Self::create_save_state(&game_path, save_state_name);
         println!("✔ Save state verified");
 
-        let mut emu = RustRetroEmulator::new(&platform, start_save_state);
+        let emu = RustRetroEmulator::new(&platform, start_save_state);
         println!("✔ Emulator verified");
 
         let mut rom_path = game_path.clone();
