@@ -35,52 +35,51 @@ A simple starting point may look like this:
     use retro_rust::traits::retro_env::RetroEnv;
 
     pub fn main() {
-    // A training scenario is defined by a (game, platform, save_state) triple
-    let game_name = "Airstriker";
-    let platform = Platform::Genesis;
-    let save_state_name = String::from("Level1.state");
-
-    let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
-
-    // Use this function signature for your policy
-    let policy = |_obs: Vec<f32>| -> usize { 0 };
-
-    let num_episodes = 100;
-    for _ in 1..num_episodes {
-        let mut step_info = env.reset();
-        let mut next_image = step_info.observation;
-        let mut next_action = policy(next_image);
-
-        let mut episode_reward = step_info.reward;
-
-        // Action-Feedback loop for one episode
-        while !step_info.is_done {
-            step_info = env.step(next_action);
-
-            next_image = step_info.observation;
-            episode_reward += step_info.reward;
-
-            next_action = policy(next_image);
+        // A training scenario is defined by a (game, platform, save_state) triple
+        let game_name = "Airstriker";
+        let platform = Platform::Genesis;
+        let save_state_name = String::from("Level1.state");
+    
+        let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
+    
+        // Use this function signature for your policy
+        let policy = |_obs: Vec<f32>| -> usize { 0 };
+    
+        let num_episodes = 100;
+        for _ in 1..num_episodes {
+            let mut step_info = env.reset();
+            let mut next_image = step_info.observation;
+            let mut next_action = policy(next_image);
+    
+            let mut episode_reward = step_info.reward;
+    
+            // Action-Feedback loop for one episode
+            while !step_info.is_done {
+                step_info = env.step(next_action);
+    
+                next_image = step_info.observation;
+                episode_reward += step_info.reward;
+    
+                next_action = policy(next_image);
+            }
+            println!("Episode reward: {}", episode_reward);
+          }
         }
-        println!("Episode reward: {}", episode_reward);
-      }
-    }
 
-## Environment Overview
+## Environment structure
 
-Environment API is kept close to python environments:
+These are the fundamental properties of retro-rust environments:
 
-| Function  | Parameters                                                 | Return Value(s)         | Note                                                           |
-|-----------|------------------------------------------------------------|-------------------------|----------------------------------------------------------------|
-| new       | `game_path: String, save_state_name: &str, frame_skip: u8` | `RetroEnv`              |
-| step      | `action: usize`                                            | `(Vec<f32>, f32, bool)` | `action` is a discrete action |
-| reset     | `-`                                                        | `Vec<f32>`              |
+|        | Type       | Description                                                |
+|--------|------------|------------------------------------------------------------|
+| Action | `usize`    | Controller button combination encoded as a discrete action | 
+| Observation | `Vec<f32>` | Normalized grayscale values of game image                  |
 
 ## Example Benchmark
 
 To evaluate runtime improvements, we benchmarked training performance using Deep Q-Networks (DQN) on the Airstriker (Sega Genesis) environment.
 
-The figure below shows the runtime behavior during DQN training in the game Airstriker on Sega Genesis:
+The figure below shows the runtime behavior training:
 
 ![Runtime image](images/exec_time.png)
 
