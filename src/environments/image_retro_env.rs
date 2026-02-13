@@ -25,22 +25,21 @@ pub struct ImageRetroEnv {
 }
 
 impl ImageRetroEnv {
-    pub fn new(game_name: &str, platform: Platform, save_state_name: String, frame_skip: u8) -> Self {
-        let mut game_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("games");
+    pub fn new(game_name: &str, platform: Platform, save_state_name: String) -> Self {
+        let mut game_path: PathBuf = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("games");
 
         let platform_name = platform.as_str();
         let game_dir = format!("{game_name}-{platform_name}");
         game_path.push(game_dir);
 
-        let game_state_path = game_path
-            .join(save_state_name)
-            .to_string_lossy()
-            .to_string();
+        println!("Starting environment setup...");
+        println!("{}", "-".repeat(30));
+        let start_save_state = Self::create_save_state(&game_path, save_state_name);
+        println!("✔ Save state verified");
 
-        let start_game_state = GameState::new(&game_state_path)
-            .expect("Failed to load state");
+        let mut emu = RustRetroEmulator::new(&platform, start_save_state);
+        println!("✔ Emulator verified");
 
-        let mut emu = RustRetroEmulator::new(&platform, start_game_state);
         let mut rom_path = game_path.clone();
         rom_path.push(platform.rom_name());
 
@@ -51,15 +50,33 @@ impl ImageRetroEnv {
         if !emu.load_rom(&rom_path) {
             panic!("Failed to load ROM");
         }
+        println!("✔ Rom verified");
 
         let data = RustRetroGameData::new(game_path.to_string_lossy().to_string());
         emu.configure_data(&data);
 
         let controller = Controller::new(data.get_button_combos());
-
         let frame_stack = FrameStack::new(84 * 84);
 
-        ImageRetroEnv { game_name: game_name.to_string(), emu, data, controller, frame_stack, frame_skip }
+        println!("{}", "-".repeat(30));
+        println!("Environment is ready to run!");
+        ImageRetroEnv {
+            game_name: game_name.to_string(),
+            emu,
+            data,
+            controller,
+            frame_stack,
+            frame_skip: 4
+        }
+    }
+
+    fn create_save_state(game_path: &PathBuf, save_state_name: String) -> GameState {
+        let game_state_path = game_path
+            .join(save_state_name)
+            .to_string_lossy()
+            .to_string();
+
+        GameState::new(&game_state_path).expect("Failed to load state")
     }
 
     pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {
