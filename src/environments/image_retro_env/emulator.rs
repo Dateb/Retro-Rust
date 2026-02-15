@@ -45,6 +45,9 @@ pub struct RustRetroEmulator {
 
 impl RustRetroEmulator {
     pub fn new(platform: &Platform, start_game_state: GameState) -> Self {
+        let cores_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cores");
+
         let platform_name = platform.as_str().to_lowercase();
 
         let json_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -55,6 +58,7 @@ impl RustRetroEmulator {
 
         let json_str_c = CString::new(json_str).expect("CString::new failed");
         unsafe {
+            std::env::set_var("RETRO_CORE_PATH", cores_path);
             load_core_info(json_str_c.as_ptr());
             let retro_emulator = emulator_new();
             RustRetroEmulator { retro_emulator, start_game_state }

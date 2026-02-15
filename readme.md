@@ -15,20 +15,17 @@
   <img src="images/demo.gif" width="220" style="margin-right: 20px;">
 </p>
 
-- <ul style="list-style: none; padding-left: 0;">
-      <li>Designed for native Rust ML workflows:</li>
-      <ul style="list-style: none; padding-left: 1em;">
-        <li>➜ Ultra-fast training loops</li>
-        <li>➜ Zero Python/C++ bindings</li>
-      </ul>
+<ul style="list-style: none; padding-left: 0;">
+  <li>Designed for native Rust ML workflows:</li>
+  <ul style="list-style: none; padding-left: 1em;">
+    <li>➜ Ultra-fast training loops</li>
+    <li>➜ Zero Python/C++ bindings</li>
   </ul>
-
-
-
+</ul>
 
 ## Getting started
 
-A simple starting point may look like this:
+This is how the learning loop looks like with an agent always using the first action:
 
     use retro_rust::environments::image_retro_env::ImageRetroEnv;
     use retro_rust::environments::image_retro_env::platform::Platform;
@@ -66,13 +63,27 @@ A simple starting point may look like this:
           }
         }
 
+## Importing other roms
+
+Most ROM's are not included and need to be acquired through other sources.
+Here is how to use other games\*:
+
+1. Look up in the `games` directory if your game is supported.
+2. Check that the SHA1 of the ROM matches the contents of `games/your_game/rom.sha`.
+3. Place the ROM in the directory `games/your_game` with the name `rom.[extension]`.
+
+---
+
+\* This process will be made easier in the future.
+
 ## Environment structure
 
-These are the fundamental properties of retro-rust environments:
+These are the basic building blocks of retro-rust environments:
 
-|        | Type       | Description                                                |
-|--------|------------|------------------------------------------------------------|
-| Action | `usize`    | Controller button combination encoded as a discrete action | 
+|             | Type       | Description                                                |
+|-------------|------------|------------------------------------------------------------|
+| Platform    | `Platform` | Supported variants are Atari/GB/GBA/NES/SNES/Genesis/PCE   |
+| Action      | `usize`    | Controller button combination encoded as a discrete action | 
 | Observation | `Vec<f32>` | Normalized grayscale values of game image                  |
 
 ## Example Benchmark
