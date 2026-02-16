@@ -77,9 +77,9 @@ mod tests {
         ]);
         let controller = Controller::new(button_combos);
 
-        assert_eq!(controller.get_button_bitmask(0), vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        assert_eq!(controller.get_button_bitmask(31), vec![1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]);
-        assert_eq!(controller.get_button_bitmask(82), vec![0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]);
-        assert_eq!(controller.get_button_bitmask(125), vec![0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1]);
+        assert_eq!(*controller.get_button_bitmask(0), vec![0u8; 12]);
+        assert_eq!(*controller.get_button_bitmask(31), vec![1u8, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]);
+        assert_eq!(*controller.get_button_bitmask(82), vec![0u8, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]);
+        assert_eq!(*controller.get_button_bitmask(125), vec![0u8, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1]);
     }
 }
