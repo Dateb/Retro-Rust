@@ -20,12 +20,12 @@ unsafe extern "C" {
     fn emulator_load_rom(emulator: *mut RetroEmulator, rom_path: *const std::os::raw::c_char) -> bool;
     fn emulator_run(emulator: *mut RetroEmulator);
     fn emulator_set_state(emulator: *mut RetroEmulator, state_data: *const u8, size: usize) -> bool;
-    fn emulator_get_screen_width(emulator: *mut RetroEmulator) -> i32;
-    fn emulator_get_screen_height(emulator: *mut RetroEmulator) -> i32;
+    fn emulator_get_screen_width(emulator: *mut RetroEmulator) -> u32;
+    fn emulator_get_screen_height(emulator: *mut RetroEmulator) -> u32;
     fn emulator_get_screen(
         emulator: *mut RetroEmulator,
-        width: i32,
-        height: i32,
+        width: u32,
+        height: u32,
         out_rgb: *mut u8,
     ) -> bool;
     fn emulator_set_button_mask(
@@ -74,7 +74,7 @@ impl RustRetroEmulator {
             emulator_run(self.retro_emulator)
         }
     }
-    pub fn get_screen(&self) -> Option<(Vec<u8>, i32, i32)> {
+    pub fn get_screen(&self) -> Option<(Vec<u8>, u32, u32)> {
         unsafe {
             let w = emulator_get_screen_width(self.retro_emulator);
             let h = emulator_get_screen_height(self.retro_emulator);

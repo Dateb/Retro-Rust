@@ -69,4 +69,46 @@ impl FrameStack {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn max_pooling_correct_values() {
+        let frame_stack = create_frame_stack();
+
+        assert_eq!(
+            frame_stack.stacked(),
+            vec![0.0, 0.0, 200.0, 100.0, 20.0, 10.0, 44.0, 10.0]
+        );
+    }
+
+    #[test]
+    fn clear_frame_stack_correct_values() {
+        let mut frame_stack = create_frame_stack();
+
+        frame_stack.clear();
+
+        assert_eq!(
+            frame_stack.stacked(),
+            vec![0.0; 8]
+        );
+    }
+
+    fn create_frame_stack() -> FrameStack {
+        let mut frame_stack = FrameStack::new(2);
+
+        // Put some frame in there that whose values will not get pooled
+        let frame = vec![200.0, 100.0];
+        frame_stack.push(frame);
+
+        // Push 2 final frames for max pooling
+        let frame = vec![20.0, 10.0];
+        frame_stack.push(frame);
+
+        let frame = vec![44.0, 5.0];
+        frame_stack.push(frame);
+
+        frame_stack
+    }
+}

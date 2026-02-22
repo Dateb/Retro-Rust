@@ -4,11 +4,12 @@ mod gamestate;
 mod frame_stack;
 mod controller;
 pub mod platform;
+mod frame_processor;
 
 use std::path::PathBuf;
-use image::{imageops::resize, imageops::FilterType, ImageBuffer, Luma, RgbImage};
 use crate::environments::image_retro_env::controller::Controller;
 use crate::environments::image_retro_env::emulator::RustRetroEmulator;
+use crate::environments::image_retro_env::frame_processor::FrameProcessor;
 use crate::environments::image_retro_env::frame_stack::FrameStack;
 use crate::environments::image_retro_env::gamedata::RustRetroGameData;
 use crate::environments::image_retro_env::gamestate::GameState;
@@ -21,6 +22,7 @@ pub struct ImageRetroEnv {
     pub emu: RustRetroEmulator,
     data: RustRetroGameData,
     controller: Controller,
+    frame_processor: FrameProcessor,
     frame_stack: FrameStack,
     pub frame_skip: u8,
 }
@@ -57,6 +59,8 @@ impl ImageRetroEnv {
         emu.configure_data(&data);
 
         let controller = Controller::new(data.get_button_combos());
+
+        let frame_processor = FrameProcessor::new(84, 84);
         let frame_stack = FrameStack::new(84 * 84);
 
         println!("{}", "-".repeat(30));
@@ -66,6 +70,7 @@ impl ImageRetroEnv {
             emu,
             data,
             controller,
+            frame_processor,
             frame_stack,
             frame_skip: 4
         }
@@ -108,31 +113,8 @@ impl ImageRetroEnv {
             .get_screen()
             .expect("Screen not available");
 
-        ImageRetroEnv::preprocess_screen(buffer, w, h)
-    }
-
-    fn preprocess_screen(buffer: Vec<u8>, w: i32, h: i32) -> Vec<f32> {
-        // 1. Convert buffer -> ImageBuffer
-        let img: RgbImage = ImageBuffer::from_raw(w as u32, h as u32, buffer)
-            .expect("Failed to convert screen buffer to image");
-
-        // 2. Resize to smaller dimensions, e.g., 84x84
-        let resized = resize(&img, 84, 84, FilterType::Nearest);
-
-        // 3. Optional: convert to grayscale
-        let gray: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_fn(resized.width(), resized.height(), |x, y| {
-            let pixel = resized.get_pixel(x, y);
-            // Standard grayscale: 0.299 R + 0.587 G + 0.114 B
-            let gray_val = (0.299 * pixel[0] as f32
-                + 0.587 * pixel[1] as f32
-                + 0.114 * pixel[2] as f32) as u8;
-            Luma([gray_val])
-        });
-
-        // 4. Flatten to Vec<f32> and normalize
-        gray.pixels()
-            .map(|p| p[0] as f32 / 255.0)
-            .collect()
+        self.frame_processor.process_frame(buffer, w, h)
+            .expect("get_screen returns valid buffer")
     }
 
     pub fn episode_reward(&self) -> f32 {
@@ -175,4 +157,30 @@ impl RetroEnv for ImageRetroEnv {
     }
 
     fn num_actions(&self) -> usize { self.controller.num_actions }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_not_done_after_reset() {
+        let game_name = "Airstriker";
+        let platform = Platform::Genesis;
+        let save_state_name = String::from("Level1.state");
+
+        let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
+        let step_info = env.reset();
+
+        assert!(!step_info.is_done)
+    }
+
+    // #[test]
+    // fn is_not_done_after_reset_2() {
+    //     let game_name = "Airstriker";
+    //     let platform = Platform::Genesis;
+    //     let save_state_name = String::from("Level1.state");
+    //
+    //     let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
+    // }
 }
