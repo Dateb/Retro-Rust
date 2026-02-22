@@ -39,7 +39,7 @@ impl Controller {
             action /= combo.len();
             buttons_value |= combo[current];
         }
-        
+
         (0..num_buttons).map(|i| ((buttons_value >> i) & 1) as u8).collect()
     }
 
@@ -54,25 +54,13 @@ mod tests {
 
     #[test]
     fn test_get_button_bitmask() {
-        let mut button_combos = Vec::new();
-        button_combos.push(vec![0, 16, 32]);
-        button_combos.push(vec![0, 64, 128]);
-        button_combos.push(vec![
-            0,
-            1,
-            2,
-            3,
-            256,
-            257,
-            512,
-            513,
-            1024,
-            1026,
-            1536,
-            2048,
-            2304,
-            2560,
-        ]);
+        let button_combos = vec![
+            vec![0, 16, 32],
+            vec![0, 64, 128],
+            vec![
+                0, 1, 2, 3, 256, 257, 512, 513, 1024, 1026, 1536, 2048, 2304, 2560,
+            ],
+        ];
         let controller = Controller::new(button_combos);
 
         assert_eq!(*controller.get_button_bitmask(0), vec![0u8; 12]);
