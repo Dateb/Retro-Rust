@@ -12,10 +12,10 @@ impl Platform {
     pub fn as_str(&self) -> &'static str {
         match self {
             Platform::Atari => "Atari",
-            Platform::GB => "GB",
+            Platform::GB => "Gameboy",
             Platform::GBA => "GBA",
-            Platform::NES => "NES",
-            Platform::SNES => "SNES",
+            Platform::NES => "Nes",
+            Platform::SNES => "Snes",
             Platform::Genesis => "Genesis",
             Platform::PCE => "PCE",
         }

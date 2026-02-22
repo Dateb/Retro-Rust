@@ -26,7 +26,7 @@ impl MovieRetroEnv {
         let movie = RustRetroMovie::new(
             &mut image_env.emu,
             movie_path,
-            String::from(image_env.game_name.clone())
+            format!("{}-Genesis", image_env.game_name.clone())
         );
 
         Self { image_env, movie, movies_dir, movie_counter }
@@ -61,7 +61,7 @@ impl RetroEnv for MovieRetroEnv {
         self.movie = RustRetroMovie::new(
             &mut self.image_env.emu,
             self.next_movie_path(),
-            String::from(self.image_env.game_name.clone())
+            format!("{}-Genesis", self.image_env.game_name.clone())
         );
 
         self.movie.step();

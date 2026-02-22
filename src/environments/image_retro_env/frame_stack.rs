@@ -2,6 +2,7 @@ use arraydeque::{ArrayDeque, Wrapping};
 
 const STACK_SIZE: usize = 4;
 
+#[derive(Debug)]
 pub struct FrameStack {
     frames: ArrayDeque<Vec<f32>, STACK_SIZE, Wrapping>,
     frame_size: usize,

@@ -86,13 +86,17 @@ These are the basic building blocks of retro-rust environments:
 | Action      | `usize`    | Controller button combination encoded as a discrete action | 
 | Observation | `Vec<f32>` | Normalized grayscale values of game image                  |
 
-## Example Benchmark
+## Benchmark
 
-To evaluate runtime improvements, we benchmarked training performance using Deep Q-Networks (DQN) on the Airstriker (Sega Genesis) environment.
+The figure below shows the runtime behavior during training:
 
-The figure below shows the runtime behavior training:
-
-![Runtime image](images/exec_time.png)
+<figure>
+  <img src="images/benchmark.png" alt="Distribution plot">
+  <figcaption>
+    Wall clock time against return for DQN training in Python and Rust on Airstriker-Genesis. 
+    The return is approximated by averaging the last 100 episodic rewards.
+  </figcaption>
+</figure>
 
 For fair comparisons, hyperparameters are replicated across both runs. These are the following:
 
@@ -113,11 +117,10 @@ For fair comparisons, hyperparameters are replicated across both runs. These are
 
 Network architecture: Standard DQN with CNN, see [Mnih et al., 2015](https://arxiv.org/abs/1312.5602)
 
-## Planned features
+## What's next
 
-From top to bottom in priority, the following features are planned
-to be added soon:
+These are upcoming changes:
 
-- Vectorized environment support
-- Parallelized step rollouts
-- RAM based observations
+- Improving the ROM setup experience
+- Vectorized environment support with parallelization
+- Further bug-fixing/testing

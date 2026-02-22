@@ -7,6 +7,7 @@ https://buildbot.libretro.com/nightly/linux/x86_64/latest/
 
 The following cores are included:
 
+- fceumm_libretro.so
 - snes9x_libretro.so
 - genesis_plus_gx_libretro.so
 
@@ -16,6 +17,7 @@ respective open-source licenses.
 Corresponding source code is available from the Libretro organization and the
 upstream emulator repositories:
 
+- https://github.com/libretro/libretro-fceumm
 - https://github.com/libretro/snes9x
 - https://github.com/libretro/Genesis-Plus-GX
 

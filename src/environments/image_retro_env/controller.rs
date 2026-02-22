@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Controller {
     actions_to_buttons_bitmask_map: HashMap<usize, Vec<u8>>,
     pub num_actions: usize,

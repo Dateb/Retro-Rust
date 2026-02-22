@@ -15,6 +15,7 @@ use crate::environments::image_retro_env::gamestate::GameState;
 use crate::environments::image_retro_env::platform::Platform;
 use crate::traits::retro_env::{RetroEnv, StepInfo};
 
+#[derive(Debug)]
 pub struct ImageRetroEnv {
     pub game_name: String,
     pub emu: RustRetroEmulator,
@@ -76,7 +77,8 @@ impl ImageRetroEnv {
             .to_string_lossy()
             .to_string();
 
-        GameState::new(&game_state_path).expect("Failed to load state")
+        GameState::new(&game_state_path)
+            .expect(&format!("Failed to load state: {}", game_state_path))
     }
 
     pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {
