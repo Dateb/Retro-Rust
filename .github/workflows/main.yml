@@ -20,7 +20,8 @@ jobs:
             build-essential \
             cmake \
             libbz2-dev \
-            zlib1g-dev
+            zlib1g-dev \
+            liblua5.1-0-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
