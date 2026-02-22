@@ -1,3 +1,7 @@
+[![codecov](https://codecov.io/github/Dateb/Retro-Rust/graph/badge.svg?token=NUGGWVX3AK)](https://codecov.io/github/Dateb/Retro-Rust)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+
 <p align="center">
   <img src="images/logo.png" width="280">
 </p>
