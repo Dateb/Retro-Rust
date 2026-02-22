@@ -23,7 +23,11 @@ pub struct RustRetroMovie {
 }
 
 impl RustRetroMovie {
-    pub fn new(emulator: *mut RustRetroEmulator, movie_name: String, game_name: String) -> Self {
+
+    /// # Safety
+    ///
+    /// Emulator raw pointer needs to point to a valid emulator
+    pub unsafe fn new(emulator: *mut RustRetroEmulator, movie_name: String, game_name: String) -> Self {
         unsafe {
             let movie_name = CString::new(movie_name).expect("CString::new failed");
             let retro_movie = movie_new(movie_name.as_ptr());

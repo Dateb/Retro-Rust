@@ -22,14 +22,16 @@ impl MovieRetroEnv {
         let movie_counter = 1u16;
 
         let movie_path = format!("{}/movie_{}.bk2", movies_dir, movie_counter);
+        
+        unsafe {
+            let movie = RustRetroMovie::new(
+                &mut image_env.emu,
+                movie_path,
+                format!("{}-Genesis", image_env.game_name.clone())
+            );
 
-        let movie = RustRetroMovie::new(
-            &mut image_env.emu,
-            movie_path,
-            format!("{}-Genesis", image_env.game_name.clone())
-        );
-
-        Self { image_env, movie, movies_dir, movie_counter }
+            Self { image_env, movie, movies_dir, movie_counter }
+        }
     }
 
     fn next_movie_path(&mut self) -> String {
@@ -58,12 +60,15 @@ impl RetroEnv for MovieRetroEnv {
         let step_info = self.image_env.reset();
 
         self.movie.close();
-        self.movie = RustRetroMovie::new(
-            &mut self.image_env.emu,
-            self.next_movie_path(),
-            format!("{}-Genesis", self.image_env.game_name.clone())
-        );
-
+        
+        unsafe {
+            self.movie = RustRetroMovie::new(
+                &mut self.image_env.emu,
+                self.next_movie_path(),
+                format!("{}-Genesis", self.image_env.game_name.clone())
+            );
+        }
+        
         self.movie.step();
 
         step_info

@@ -1,4 +1,5 @@
 [![codecov](https://codecov.io/github/Dateb/Retro-Rust/graph/badge.svg?token=NUGGWVX3AK)](https://codecov.io/github/Dateb/Retro-Rust)
+![Clippy](https://img.shields.io/github/actions/workflow/status/Dateb/Retro-Rust/clippy.yml?branch=main)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 

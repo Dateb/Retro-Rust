@@ -82,7 +82,7 @@ impl RustRetroEmulator {
             let mut buffer = vec![0u8; (w * h * 3) as usize];
 
             let ok = emulator_get_screen(self.retro_emulator, w, h, buffer.as_mut_ptr());
-            ok.then(|| (buffer, w, h))
+            ok.then_some((buffer, w, h))
         }
     }
     pub fn set_button_mask(&self, mask: &[u8], player: u32) {

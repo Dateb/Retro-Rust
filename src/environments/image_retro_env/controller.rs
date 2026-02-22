@@ -39,11 +39,8 @@ impl Controller {
             action /= combo.len();
             buttons_value |= combo[current];
         }
-        let mut buttons_bitmask = vec![0u8; num_buttons];
-        for i in 0..num_buttons {
-            buttons_bitmask[i] = ((buttons_value >> i) & 1) as u8;
-        }
-        buttons_bitmask
+        
+        (0..num_buttons).map(|i| ((buttons_value >> i) & 1) as u8).collect()
     }
 
     pub fn get_button_bitmask(&self, action: usize) -> &Vec<u8> {

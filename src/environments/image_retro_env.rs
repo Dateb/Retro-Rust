@@ -6,7 +6,7 @@ mod controller;
 pub mod platform;
 mod frame_processor;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use crate::environments::image_retro_env::controller::Controller;
 use crate::environments::image_retro_env::emulator::RustRetroEmulator;
 use crate::environments::image_retro_env::frame_processor::FrameProcessor;
@@ -76,14 +76,14 @@ impl ImageRetroEnv {
         }
     }
 
-    fn create_save_state(game_path: &PathBuf, save_state_name: String) -> GameState {
+    fn create_save_state(game_path: &Path, save_state_name: String) -> GameState {
         let game_state_path = game_path
             .join(save_state_name)
             .to_string_lossy()
             .to_string();
 
         GameState::new(&game_state_path)
-            .expect(&format!("Failed to load state: {}", game_state_path))
+            .unwrap_or_else(|_| panic!("Failed to load state: {}", game_state_path))
     }
 
     pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {
