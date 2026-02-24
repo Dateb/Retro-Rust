@@ -35,13 +35,13 @@ impl ImageRetroEnv {
         let game_dir = format!("{game_name}-{platform_name}");
         game_path.push(game_dir);
 
-        println!("Starting environment setup...");
-        println!("{}", "-".repeat(30));
+        // println!("Starting environment setup...");
+        // println!("{}", "-".repeat(30));
         let start_save_state = Self::create_save_state(&game_path, save_state_name);
-        println!("✔ Save state verified");
+        // println!("✔ Save state verified");
 
         let emu = RustRetroEmulator::new(&platform, start_save_state);
-        println!("✔ Emulator verified");
+        // println!("✔ Emulator verified");
 
         let mut rom_path = game_path.clone();
         rom_path.push(platform.rom_name());
@@ -53,7 +53,7 @@ impl ImageRetroEnv {
         if !emu.load_rom(&rom_path) {
             panic!("Failed to load ROM");
         }
-        println!("✔ Rom verified");
+        // println!("✔ Rom verified");
 
         let data = RustRetroGameData::new(game_path.to_string_lossy().to_string());
         emu.configure_data(&data);
@@ -63,8 +63,8 @@ impl ImageRetroEnv {
         let frame_processor = FrameProcessor::new(84, 84);
         let frame_stack = FrameStack::new(84 * 84);
 
-        println!("{}", "-".repeat(30));
-        println!("Environment is ready to run!");
+        // println!("{}", "-".repeat(30));
+        // println!("Environment is ready to run!");
         ImageRetroEnv {
             game_name: game_name.to_string(),
             emu,
