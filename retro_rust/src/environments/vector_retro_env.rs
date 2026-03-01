@@ -1,5 +1,6 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::io::Read;
 
 use crate::traits::retro_env::StepInfo;
 
@@ -84,15 +85,37 @@ impl VectorRetroEnv {
     fn send_action(&mut self, env_idx: usize, action: usize) {
         let stdin = &mut self.stdins[env_idx];
         writeln!(stdin, "{}", action).unwrap();
-        stdin.flush().unwrap();
     }
 
     fn read_step(&mut self, env_idx: usize) -> StepInfo {
         let reader = &mut self.readers[env_idx];
-        let mut line = String::new();
-        reader.read_line(&mut line).unwrap();
-        
-        serde_json::from_str(&line).unwrap()
+
+        let obs_len = 84*84*4;
+
+        // ---- Read observation ----
+        let mut obs = vec![0f32; obs_len];
+        let obs_bytes = bytemuck::cast_slice_mut::<f32, u8>(&mut obs);
+        reader.read_exact(obs_bytes).unwrap();
+
+        // ---- Read reward ----
+        let mut reward_buf = [0u8; 4];
+        reader.read_exact(&mut reward_buf).unwrap();
+        let reward = f32::from_le_bytes(reward_buf);
+
+        // ---- Read done ----
+        let mut done_buf = [0u8; 1];
+        reader.read_exact(&mut done_buf).unwrap();
+        let is_done = done_buf[0] != 0;
+
+        StepInfo {
+            observation: obs,
+            reward,
+            is_done,
+        }
+    }
+
+    pub fn num_envs(&self) -> usize {
+        self.num_envs
     }
 }
 

@@ -318,6 +318,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 name = "emulator_worker"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "retro_rust",
  "serde_json",
 ]
@@ -1082,6 +1083,7 @@ version = "0.1.0"
 dependencies = [
  "arraydeque",
  "bindgen",
+ "bytemuck",
  "cc",
  "cmake",
  "flate2",

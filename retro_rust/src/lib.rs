@@ -1,17 +1,25 @@
 use crate::environments::image_retro_env::ImageRetroEnv;
 use crate::environments::image_retro_env::platform::Platform;
+use crate::environments::retro_env::{build_env, RetroEnvScenario};
 use crate::traits::retro_env::RetroEnv;
 
 pub mod environments;
 pub mod traits;
 
 pub fn main() {
-    // A training scenario is defined by a (game, platform, save_state) triple
     let game_name = "Airstriker";
     let platform = Platform::Genesis;
-    let save_state_name = String::from("Level1.state");
+    let save_state_name = "Level1.state";
+    let record_movie = false;
 
-    let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
+    let scenario = RetroEnvScenario::new(
+        game_name,
+        platform,
+        save_state_name,
+        record_movie,
+    );
+
+    let mut env = build_env(scenario);
 
     // Use this function signature for your policy
     let policy = |_obs: Vec<f32>| -> usize { 0 };

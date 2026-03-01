@@ -7,14 +7,14 @@ use crate::traits::retro_env::{RetroEnv, StepInfo};
 pub mod movie;
 
 pub struct MovieRetroEnv {
-    image_env: ImageRetroEnv,
+    image_env: Box<ImageRetroEnv>,
     movie: RustRetroMovie,
     movies_dir: &'static str,
     movie_counter: u16
 }
 
 impl MovieRetroEnv {
-    pub fn new(mut image_env: ImageRetroEnv) -> Self {
+    pub fn new(mut image_env: Box<ImageRetroEnv>) -> Self {
         let movies_dir = "movies";
         let movies_path = Path::new(movies_dir);
         if !movies_path.exists() { fs::create_dir(movies_path).expect("Cannot create movies dir") }
@@ -25,7 +25,7 @@ impl MovieRetroEnv {
         
         unsafe {
             let movie = RustRetroMovie::new(
-                &mut image_env.emu,
+                &mut image_env.emulator,
                 movie_path,
                 format!("{}-Genesis", image_env.game_name.clone())
             );
@@ -63,7 +63,7 @@ impl RetroEnv for MovieRetroEnv {
         
         unsafe {
             self.movie = RustRetroMovie::new(
-                &mut self.image_env.emu,
+                &mut self.image_env.emulator,
                 self.next_movie_path(),
                 format!("{}-Genesis", self.image_env.game_name.clone())
             );

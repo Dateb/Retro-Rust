@@ -19,7 +19,7 @@ use crate::traits::retro_env::{RetroEnv, StepInfo};
 #[derive(Debug)]
 pub struct ImageRetroEnv {
     pub game_name: String,
-    pub emu: RustRetroEmulator,
+    pub emulator: RustRetroEmulator,
     data: RustRetroGameData,
     controller: Controller,
     frame_processor: FrameProcessor,
@@ -28,7 +28,7 @@ pub struct ImageRetroEnv {
 }
 
 impl ImageRetroEnv {
-    pub fn new(game_name: &str, platform: Platform, save_state_name: String) -> Self {
+    pub(crate) fn new(game_name: &str, platform: Platform, save_state_name: &str) -> Self {
         let mut game_path: PathBuf = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("games");
 
         let platform_name = platform.as_str();
@@ -40,7 +40,7 @@ impl ImageRetroEnv {
         let start_save_state = Self::create_save_state(&game_path, save_state_name);
         // println!("✔ Save state verified");
 
-        let emu = RustRetroEmulator::new(&platform, start_save_state);
+        let emulator = RustRetroEmulator::new(&platform, start_save_state);
         // println!("✔ Emulator verified");
 
         let mut rom_path = game_path.clone();
@@ -50,13 +50,13 @@ impl ImageRetroEnv {
             .to_string_lossy()
             .to_string();
 
-        if !emu.load_rom(&rom_path) {
+        if !emulator.load_rom(&rom_path) {
             panic!("Failed to load ROM");
         }
         // println!("✔ Rom verified");
 
         let data = RustRetroGameData::new(game_path.to_string_lossy().to_string());
-        emu.configure_data(&data);
+        emulator.configure_data(&data);
 
         let controller = Controller::new(data.get_button_combos());
 
@@ -67,7 +67,7 @@ impl ImageRetroEnv {
         // println!("Environment is ready to run!");
         ImageRetroEnv {
             game_name: game_name.to_string(),
-            emu,
+            emulator,
             data,
             controller,
             frame_processor,
@@ -76,7 +76,7 @@ impl ImageRetroEnv {
         }
     }
 
-    fn create_save_state(game_path: &Path, save_state_name: String) -> GameState {
+    fn create_save_state(game_path: &Path, save_state_name: &str) -> GameState {
         let game_state_path = game_path
             .join(save_state_name)
             .to_string_lossy()
@@ -87,8 +87,8 @@ impl ImageRetroEnv {
     }
 
     pub fn skipped_frame_step(&self, button_bit_mask: &Vec<u8>) -> f32 {
-        self.emu.set_button_mask(button_bit_mask.as_slice(), 0);
-        self.emu.step();
+        self.emulator.set_button_mask(button_bit_mask.as_slice(), 0);
+        self.emulator.step();
         self.data.update_ram();
 
         self.data.current_reward()
@@ -109,7 +109,7 @@ impl ImageRetroEnv {
 
     fn get_screen_buffer(&self) -> Vec<f32> {
         let (buffer, w, h) = self
-            .emu
+            .emulator
             .get_screen()
             .expect("Screen not available");
 
@@ -139,9 +139,9 @@ impl RetroEnv for ImageRetroEnv {
     }
 
     fn reset(&mut self) -> StepInfo {
-        self.emu.set_start_state();
+        self.emulator.set_start_state();
 
-        self.emu.step();
+        self.emulator.step();
         self.data.reset();
         self.data.update_ram();
 
@@ -169,7 +169,7 @@ mod tests {
         let platform = Platform::Genesis;
         let save_state_name = String::from("Level1.state");
 
-        let mut env = ImageRetroEnv::new(game_name, platform, save_state_name);
+        let mut env = ImageRetroEnv::new(game_name, platform, &save_state_name);
         let step_info = env.reset();
 
         assert!(!step_info.is_done)
