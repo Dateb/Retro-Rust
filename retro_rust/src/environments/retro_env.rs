@@ -3,11 +3,12 @@ use crate::traits::retro_env::RetroEnv;
 use crate::environments::image_retro_env::platform::Platform;
 use crate::environments::movie_retro_env::MovieRetroEnv;
 
+#[derive(Clone)]
 pub struct RetroEnvScenario<'a> {
-    game_name: &'a str,
-    platform: Platform,
-    save_state_name: &'a str,
-    record_movie: bool,
+    pub(crate) game_name: &'a str,
+    pub(crate) platform: Platform,
+    pub(crate) save_state_name: &'a str,
+    pub(crate) record_movie: bool,
 }
 
 impl<'a> RetroEnvScenario<'a> {

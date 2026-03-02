@@ -10,11 +10,14 @@ pub struct MovieRetroEnv {
     image_env: Box<ImageRetroEnv>,
     movie: RustRetroMovie,
     movies_dir: &'static str,
-    movie_counter: u16
+    movie_counter: u16,
+    movie_frequency: u16
 }
 
 impl MovieRetroEnv {
     pub fn new(mut image_env: Box<ImageRetroEnv>) -> Self {
+        let movie_frequency = 10;
+        
         let movies_dir = "movies";
         let movies_path = Path::new(movies_dir);
         if !movies_path.exists() { fs::create_dir(movies_path).expect("Cannot create movies dir") }
@@ -30,13 +33,19 @@ impl MovieRetroEnv {
                 format!("{}-Genesis", image_env.game_name.clone())
             );
 
-            Self { image_env, movie, movies_dir, movie_counter }
+            Self { image_env, movie, movies_dir, movie_counter, movie_frequency }
         }
     }
 
     fn next_movie_path(&mut self) -> String {
-        self.movie_counter += 1;
         format!("{}/movie_{}.bk2", self.movies_dir, self.movie_counter)
+    }
+
+    fn step_movie(&self, button_bit_mask: &Vec<u8>) {
+        for (idx, value) in button_bit_mask.iter().enumerate() {
+            self.movie.set_key(idx, *value == 1);
+        }
+        self.movie.step();
     }
 }
 
@@ -46,11 +55,10 @@ impl RetroEnv for MovieRetroEnv {
 
         let mut reward = 0.0;
         for _ in 0..self.image_env.frame_skip {
-            for (idx, value) in button_bit_mask.iter().enumerate() {
-                self.movie.set_key(idx, *value == 1);
+            if self.movie_counter % self.movie_frequency == 0 {
+                self.step_movie(button_bit_mask);
             }
-            self.movie.step();
-            reward += self.image_env.skipped_frame_step(button_bit_mask)
+            reward += self.image_env.skipped_frame_step(button_bit_mask);
         }
 
         self.image_env.step_current_frame(reward)
@@ -60,16 +68,18 @@ impl RetroEnv for MovieRetroEnv {
         let step_info = self.image_env.reset();
 
         self.movie.close();
-        
-        unsafe {
-            self.movie = RustRetroMovie::new(
-                &mut self.image_env.emulator,
-                self.next_movie_path(),
-                format!("{}-Genesis", self.image_env.game_name.clone())
-            );
+
+        self.movie_counter += 1;
+        if self.movie_counter % self.movie_frequency == 0 {
+            unsafe {
+                self.movie = RustRetroMovie::new(
+                    &mut self.image_env.emulator,
+                    self.next_movie_path(),
+                    format!("{}-Genesis", self.image_env.game_name.clone())
+                );
+            }
+            self.movie.step();
         }
-        
-        self.movie.step();
 
         step_info
     }

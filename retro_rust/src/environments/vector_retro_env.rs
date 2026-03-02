@@ -1,7 +1,7 @@
 use std::io::{BufReader, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::io::Read;
-
+use crate::environments::retro_env::RetroEnvScenario;
 use crate::traits::retro_env::StepInfo;
 
 pub struct VectorRetroEnv {
@@ -12,16 +12,18 @@ pub struct VectorRetroEnv {
 }
 
 impl VectorRetroEnv {
-    pub fn new(num_envs: usize) -> Self {
+    pub fn new(scenarios: Vec<RetroEnvScenario>) -> Self {
+        let num_envs = scenarios.len();
+
         let mut workers = Vec::with_capacity(num_envs);
         let mut stdins = Vec::with_capacity(num_envs);
         let mut readers = Vec::with_capacity(num_envs);
 
-        for _ in 0..num_envs {
-            let mut worker = Self::create_worker();
+        for scenario in &scenarios {
+            let mut worker = Self::create_worker(scenario);
 
-            let stdin = worker.stdin.take().unwrap();
-            let stdout = worker.stdout.take().unwrap();
+            let stdin = worker.stdin.take().expect("Worker stdin missing");
+            let stdout = worker.stdout.take().expect("Worker stdout missing");
 
             stdins.push(stdin);
             readers.push(BufReader::new(stdout));
@@ -51,14 +53,15 @@ impl VectorRetroEnv {
         results
     }
     
-    fn create_worker() -> Child {
+    fn create_worker(retro_env_scenario: &RetroEnvScenario) -> Child {
         let worker_path = Self::resolve_worker_path();
         println!("Spawning worker at: {:?}", worker_path);
 
         Command::new(Self::resolve_worker_path())
-            .arg("Airstriker")
-            .arg("Genesis")
-            .arg("Level1.state")
+            .arg(retro_env_scenario.game_name)
+            .arg(retro_env_scenario.platform.as_str())
+            .arg(retro_env_scenario.save_state_name)
+            .arg(retro_env_scenario.record_movie.to_string())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()

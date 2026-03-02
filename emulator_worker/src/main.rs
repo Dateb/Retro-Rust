@@ -27,14 +27,7 @@ fn process_action_command(cmd: &str, env: &mut Box<dyn RetroEnv>, out: &mut Stdo
     out.flush().unwrap();
 }
 
-pub fn run_worker(game: &str, platform: &str, save_state: &str) {
-    let scenario = RetroEnvScenario::new(
-        "Airstriker",
-        Platform::Genesis,
-        "Level1.state",
-        false
-    );
-
+pub fn run_worker(scenario: RetroEnvScenario) {
     let mut env = build_env(scenario);
 
     let stdin = io::stdin();
@@ -55,14 +48,17 @@ pub fn run_worker(game: &str, platform: &str, save_state: &str) {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 4 {
-        eprintln!("Usage: worker <game> <platform> <save_state>");
+    if args.len() < 5 {
+        eprintln!("Usage: worker <game> <platform> <save_state> <record_movie>");
         std::process::exit(1);
     }
 
-    let game = &args[1];
-    let platform = &args[2];
-    let save_state = &args[3];
+    let scenario = RetroEnvScenario::new(
+        &args[1],
+        Platform::Genesis,
+        &args[3],
+        args[4].parse::<bool>().unwrap()
+    );
 
-    run_worker(game, platform, save_state);
+    run_worker(scenario);
 }
