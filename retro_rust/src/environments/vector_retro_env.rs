@@ -8,6 +8,7 @@ pub struct VectorRetroEnv {
     workers: Vec<Child>,
     stdins: Vec<ChildStdin>,
     readers: Vec<BufReader<std::process::ChildStdout>>,
+    step_buffers: Vec<Vec<u8>>,
     num_envs: usize,
 }
 
@@ -30,10 +31,18 @@ impl VectorRetroEnv {
             workers.push(worker);
         }
 
+        let obs_len = 84*84*4*4;
+
+        let mut step_buffers = Vec::with_capacity(num_envs);
+        for _ in 0..num_envs {
+            step_buffers.push(vec![0u8; obs_len + 5]);
+        }
+
         Self {
             workers,
             stdins,
             readers,
+            step_buffers,
             num_envs,
         }
     }
@@ -95,12 +104,11 @@ impl VectorRetroEnv {
 
         let obs_len = 84*84*4*4;
 
-        let mut step_bytes = vec![0u8; obs_len + 4 + 1];
-        reader.read_exact(&mut step_bytes).unwrap();
+        reader.read_exact(&mut self.step_buffers[env_idx]).unwrap();
 
-        let obs_bytes = &step_bytes[..obs_len];
-        let reward_bytes = &step_bytes[obs_len..obs_len+4];
-        let done_byte = step_bytes[obs_len+4];
+        let obs_bytes = &self.step_buffers[env_idx][..obs_len];
+        let reward_bytes = &self.step_buffers[env_idx][obs_len..obs_len+4];
+        let done_byte = self.step_buffers[env_idx][obs_len+4];
 
         let observation: Vec<f32> = bytemuck::cast_slice(obs_bytes).to_vec();
         let reward = f32::from_le_bytes(reward_bytes.try_into().unwrap());
