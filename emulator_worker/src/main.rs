@@ -9,20 +9,21 @@ fn process_action_command(cmd: &str, env: &mut Box<dyn RetroEnv>, out: &mut Stdo
     let action = cmd.parse().expect("Invalid action");
     let mut step_info = env.step(action);
 
-    if step_info.is_done { 
+    if step_info.is_done {
         let step_info_reset = env.reset();
         step_info.observation = step_info_reset.observation;
     }
 
-    // ---- Write observation raw bytes ----
     let obs_bytes = bytemuck::cast_slice::<f32, u8>(&step_info.observation);
-    out.write_all(obs_bytes).unwrap();
+    let reward_bytes = step_info.reward.to_le_bytes();
+    let done_byte = [step_info.is_done as u8];
 
-    // ---- Write reward ----
-    out.write_all(&step_info.reward.to_le_bytes()).unwrap();
+    let mut buf = Vec::with_capacity(obs_bytes.len() + 4 + 1);
+    buf.extend_from_slice(obs_bytes);
+    buf.extend_from_slice(&reward_bytes);
+    buf.extend_from_slice(&done_byte);
 
-    // ---- Write done flag ----
-    out.write_all(&[step_info.is_done as u8]).unwrap();
+    out.write_all(&buf).unwrap();
 
     out.flush().unwrap();
 }

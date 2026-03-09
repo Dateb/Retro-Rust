@@ -93,25 +93,21 @@ impl VectorRetroEnv {
     fn read_step(&mut self, env_idx: usize) -> StepInfo {
         let reader = &mut self.readers[env_idx];
 
-        let obs_len = 84*84*4;
+        let obs_len = 84*84*4*4;
 
-        // ---- Read observation ----
-        let mut obs = vec![0f32; obs_len];
-        let obs_bytes = bytemuck::cast_slice_mut::<f32, u8>(&mut obs);
-        reader.read_exact(obs_bytes).unwrap();
+        let mut step_bytes = vec![0u8; obs_len + 4 + 1];
+        reader.read_exact(&mut step_bytes).unwrap();
 
-        // ---- Read reward ----
-        let mut reward_buf = [0u8; 4];
-        reader.read_exact(&mut reward_buf).unwrap();
-        let reward = f32::from_le_bytes(reward_buf);
+        let obs_bytes = &step_bytes[..obs_len];
+        let reward_bytes = &step_bytes[obs_len..obs_len+4];
+        let done_byte = step_bytes[obs_len+4];
 
-        // ---- Read done ----
-        let mut done_buf = [0u8; 1];
-        reader.read_exact(&mut done_buf).unwrap();
-        let is_done = done_buf[0] != 0;
+        let observation: Vec<f32> = bytemuck::cast_slice(obs_bytes).to_vec();
+        let reward = f32::from_le_bytes(reward_bytes.try_into().unwrap());
+        let is_done = done_byte != 0;
 
         StepInfo {
-            observation: obs,
+            observation,
             reward,
             is_done,
         }

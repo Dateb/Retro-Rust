@@ -6,16 +6,16 @@ use crate::traits::retro_env::{RetroEnv, StepInfo};
 
 pub mod movie;
 
-pub struct MovieRetroEnv {
-    image_env: Box<ImageRetroEnv>,
+pub struct MovieRetroEnv<'a> {
+    image_env: Box<ImageRetroEnv<'a>>,
     movie: RustRetroMovie,
     movies_dir: &'static str,
     movie_counter: u16,
     movie_frequency: u16
 }
 
-impl MovieRetroEnv {
-    pub fn new(mut image_env: Box<ImageRetroEnv>) -> Self {
+impl<'a> MovieRetroEnv<'a> {
+    pub fn new(mut image_env: Box<ImageRetroEnv<'a>>) -> Self {
         let movie_frequency = 10;
         
         let movies_dir = "movies";
@@ -49,7 +49,7 @@ impl MovieRetroEnv {
     }
 }
 
-impl RetroEnv for MovieRetroEnv {
+impl RetroEnv for MovieRetroEnv<'_> {
     fn step(&mut self, action: usize) -> StepInfo {
         let button_bit_mask = self.image_env.get_button_bitmask(action);
 

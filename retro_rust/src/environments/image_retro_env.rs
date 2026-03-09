@@ -7,6 +7,7 @@ pub mod platform;
 mod frame_processor;
 
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 use crate::environments::image_retro_env::controller::Controller;
 use crate::environments::image_retro_env::emulator::RustRetroEmulator;
 use crate::environments::image_retro_env::frame_processor::FrameProcessor;
@@ -17,17 +18,17 @@ use crate::environments::image_retro_env::platform::Platform;
 use crate::traits::retro_env::{RetroEnv, StepInfo};
 
 #[derive(Debug)]
-pub struct ImageRetroEnv {
+pub struct ImageRetroEnv<'a> {
     pub game_name: String,
     pub emulator: RustRetroEmulator,
     data: RustRetroGameData,
     controller: Controller,
-    frame_processor: FrameProcessor,
+    frame_processor: FrameProcessor<'a>,
     frame_stack: FrameStack,
     pub frame_skip: u8,
 }
 
-impl ImageRetroEnv {
+impl<'a> ImageRetroEnv<'a> {
     pub(crate) fn new(game_name: &str, platform: Platform, save_state_name: &str) -> Self {
         let mut game_path: PathBuf = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("games");
 
@@ -107,14 +108,16 @@ impl ImageRetroEnv {
 
     fn is_done(&self) -> bool { self.data.is_done() }
 
-    fn get_screen_buffer(&self) -> Vec<f32> {
+    fn get_screen_buffer(&mut self) -> Vec<f32> {
         let (buffer, w, h) = self
             .emulator
             .get_screen()
             .expect("Screen not available");
 
-        self.frame_processor.process_frame(buffer, w, h)
-            .expect("get_screen returns valid buffer")
+        let frame_result = self.frame_processor.process_frame(buffer, w, h)
+            .expect("get_screen returns valid buffer");
+
+        frame_result
     }
 
     pub fn episode_reward(&self) -> f32 {
@@ -126,7 +129,7 @@ impl ImageRetroEnv {
     }
 }
 
-impl RetroEnv for ImageRetroEnv {
+impl RetroEnv for ImageRetroEnv<'_> {
     fn step(&mut self, action: usize) -> StepInfo {
         let button_bit_mask = self.get_button_bitmask(action);
 
@@ -135,7 +138,8 @@ impl RetroEnv for ImageRetroEnv {
             reward += self.skipped_frame_step(button_bit_mask)
         }
 
-        self.step_current_frame(reward)
+        let step_info = self.step_current_frame(reward);
+        step_info
     }
 
     fn reset(&mut self) -> StepInfo {
