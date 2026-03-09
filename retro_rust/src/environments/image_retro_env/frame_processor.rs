@@ -67,11 +67,6 @@ impl<'a> FrameProcessor<'a> {
 
         out
     }
-
-
-    fn flatten_frame(&self, gray_image: ImageBuffer<Luma<f32>, Vec<f32>>) -> Vec<f32> {
-        gray_image.pixels().map(|p| p[0]).collect()
-    }
 }
 
 #[cfg(test)]

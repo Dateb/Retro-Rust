@@ -109,13 +109,16 @@ impl<'a> ImageRetroEnv<'a> {
     fn is_done(&self) -> bool { self.data.is_done() }
 
     fn get_screen_buffer(&mut self) -> Vec<f32> {
-        let (buffer, w, h) = self
+        let buffer = self
             .emulator
             .get_screen()
             .expect("Screen not available");
 
-        let frame_result = self.frame_processor.process_frame(buffer, w, h)
-            .expect("get_screen returns valid buffer");
+        let frame_result = self.frame_processor.process_frame(
+            buffer, 
+            self.emulator.screen_width, 
+            self.emulator.screen_height
+        ).expect("get_screen returns valid buffer");
 
         frame_result
     }

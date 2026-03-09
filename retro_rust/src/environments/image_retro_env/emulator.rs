@@ -40,7 +40,9 @@ unsafe extern "C" {
 #[derive(Debug)]
 pub struct RustRetroEmulator {
     pub retro_emulator: *mut RetroEmulator,
-    pub start_game_state: GameState
+    pub start_game_state: GameState,
+    pub screen_width: u32,
+    pub screen_height: u32
 }
 
 impl RustRetroEmulator {
@@ -61,7 +63,11 @@ impl RustRetroEmulator {
             std::env::set_var("RETRO_CORE_PATH", cores_path);
             load_core_info(json_str_c.as_ptr());
             let retro_emulator = emulator_new();
-            RustRetroEmulator { retro_emulator, start_game_state }
+
+            let screen_width = emulator_get_screen_width(retro_emulator);
+            let screen_height = emulator_get_screen_height(retro_emulator);
+
+            RustRetroEmulator { retro_emulator, start_game_state, screen_width, screen_height }
         }
     }
     pub fn configure_data(&self, data: &RustRetroGameData) {
@@ -74,15 +80,17 @@ impl RustRetroEmulator {
             emulator_run(self.retro_emulator)
         }
     }
-    pub fn get_screen(&self) -> Option<(Vec<u8>, u32, u32)> {
+    pub fn get_screen(&self) -> Option<Vec<u8>> {
         unsafe {
-            let w = emulator_get_screen_width(self.retro_emulator);
-            let h = emulator_get_screen_height(self.retro_emulator);
+            let mut buffer = vec![0u8; (self.screen_width * self.screen_height * 3) as usize];
 
-            let mut buffer = vec![0u8; (w * h * 3) as usize];
-
-            let ok = emulator_get_screen(self.retro_emulator, w, h, buffer.as_mut_ptr());
-            ok.then_some((buffer, w, h))
+            let ok = emulator_get_screen(
+                self.retro_emulator,
+                self.screen_width,
+                self.screen_height,
+                buffer.as_mut_ptr()
+            );
+            ok.then_some(buffer)
         }
     }
     pub fn set_button_mask(&self, mask: &[u8], player: u32) {
