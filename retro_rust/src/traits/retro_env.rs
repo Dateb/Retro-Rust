@@ -1,6 +1,3 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
 pub struct StepInfo {
     pub observation: Vec<f32>,
     pub reward: f32,
