@@ -61,7 +61,12 @@ impl<'a> ImageRetroEnv<'a> {
 
         let controller = Controller::new(data.get_button_combos());
 
-        let frame_processor = FrameProcessor::new(84, 84);
+        let frame_processor = FrameProcessor::new(
+            emulator.screen_width,
+            emulator.screen_height,
+            84,
+            84
+        );
         let frame_stack = FrameStack::new(84 * 84);
 
         // println!("{}", "-".repeat(30));
@@ -115,8 +120,8 @@ impl<'a> ImageRetroEnv<'a> {
             .expect("Screen not available");
 
         let frame_result = self.frame_processor.process_frame(
-            buffer, 
-            self.emulator.screen_width, 
+            buffer,
+            self.emulator.screen_width,
             self.emulator.screen_height
         ).expect("get_screen returns valid buffer");
 

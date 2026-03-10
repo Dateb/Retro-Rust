@@ -8,35 +8,44 @@ pub struct FrameProcessor<'a> {
     resized_width: u32,
     resized_height: u32,
     resizer: Resizer,
-    resized_image: Image<'a>
+    resized_image: Image<'a>,
+    in_frame: RgbImage,
 }
 
 impl<'a> FrameProcessor<'a> {
-    pub fn new(resized_width: u32, resized_height: u32) -> Self {
+    pub fn new(
+        in_width: u32,
+        in_height: u32,
+        resized_width: u32, 
+        resized_height: u32
+    ) -> Self {
         let resizer = Resizer::new();
         let resized_image = Image::new(
             resized_width,
             resized_height,
             PixelType::U8x3
         );
+        let buffer = vec![0u8; (in_width * in_height * 3) as usize];
+        let in_frame: RgbImage = ImageBuffer::from_raw(in_width, in_height, buffer)
+            .ok_or("Buffer size does not match width × height × 3").expect("The initial buffer should have correct size");
         Self {
             resized_width,
             resized_height,
             resizer,
-            resized_image
+            resized_image,
+            in_frame
         }
     }
 
     pub fn process_frame(&mut self, buffer: Vec<u8>, w: u32, h: u32) -> Result<Vec<f32>, String> {
-        let frame: RgbImage = ImageBuffer::from_raw(w, h, buffer)
-            .ok_or("Buffer size does not match width × height × 3")?;
+        self.in_frame.copy_from_slice(&buffer);
         let resize_option = ResizeOptions {
             algorithm: ResizeAlg::Nearest,
             cropping: Default::default(),
             mul_div_alpha: false
         };
 
-        self.resizer.resize(&frame, &mut self.resized_image, &resize_option).unwrap();
+        self.resizer.resize(&self.in_frame, &mut self.resized_image, &resize_option).unwrap();
         
         let gray = self.rgb_to_gray_f32(
             self.resized_image.buffer(),
@@ -75,9 +84,11 @@ mod tests {
 
     #[test]
     fn processed_frame_correct_size() {
+        let in_width = 4;
+        let in_height = 1;
         let resized_width = 22;
         let resized_height = 8;
-        let mut frame_processor = FrameProcessor::new(resized_width, resized_height);
+        let mut frame_processor = FrameProcessor::new(in_width, in_height, resized_width, resized_height);
 
         let buffer_input = create_buffer_input();
 
@@ -93,9 +104,11 @@ mod tests {
 
     #[test]
     fn processed_frame_correct_pixel_values() {
+        let in_width = 4;
+        let in_height = 1;
         let resized_width = 2;
         let resized_height = 2;
-        let mut frame_processor = FrameProcessor::new(resized_width, resized_height);
+        let mut frame_processor = FrameProcessor::new(in_width, in_height, resized_width, resized_height);
 
         let buffer_input = create_buffer_input();
 
