@@ -28,6 +28,15 @@
   </ul>
 </ul>
 
+## Installation
+
+Run the following command to install the required dependencies:
+
+```bash
+sudo apt install build-essential cmake zlib1g-dev libbz2-dev liblua5.1-0-dev
+```
+
+
 ## Getting started
 
 This is how the learning loop looks like with an agent always using the first action:
