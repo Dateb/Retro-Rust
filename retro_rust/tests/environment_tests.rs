@@ -1,13 +1,7 @@
-use std::process::{Child, Command, Stdio};
-use std::io::{BufRead, BufReader, Write};
-use std::time::Instant;
 use rand::Rng;
-use retro_rust::environments::image_retro_env::ImageRetroEnv;
 use retro_rust::environments::image_retro_env::platform::Platform;
-use retro_rust::environments::movie_retro_env::MovieRetroEnv;
-use retro_rust::environments::retro_env::{build_env, RetroEnvScenario};
+use retro_rust::environments::retro_env::{RetroEnvScenario};
 use retro_rust::environments::vector_retro_env::VectorRetroEnv;
-use retro_rust::traits::retro_env::{RetroEnv, StepInfo};
 
 // #[test]
 // fn create_image_env() {
@@ -89,7 +83,7 @@ fn run_vector_env() {
     let mut scenarios = Vec::with_capacity(5);
 
     scenarios.push(movie_scenario);
-    scenarios.extend(std::iter::repeat(image_scenario).take(4));
+    scenarios.extend(std::iter::repeat_n(image_scenario, 4));
 
     let num_envs = scenarios.len();
 
@@ -100,7 +94,7 @@ fn run_vector_env() {
 
     for _ in 0..500 {
         // generate a random action between 0 and 125
-        let action = rand::thread_rng().gen_range(0..126);
+        let action = rand::rng().random_range(0..126);
         let actions = vec![action; num_envs];
 
         let step_infos = vector_env.step(&actions);
