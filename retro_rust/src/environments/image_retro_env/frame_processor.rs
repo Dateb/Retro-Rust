@@ -16,7 +16,7 @@ impl<'a> FrameProcessor<'a> {
     pub fn new(
         in_width: u32,
         in_height: u32,
-        resized_width: u32, 
+        resized_width: u32,
         resized_height: u32
     ) -> Self {
         let resizer = Resizer::new();
@@ -37,7 +37,7 @@ impl<'a> FrameProcessor<'a> {
         }
     }
 
-    pub fn process_frame(&mut self, buffer: Vec<u8>, w: u32, h: u32) -> Result<Vec<f32>, String> {
+    pub fn process_frame(&mut self, buffer: Vec<u8>) -> Result<Vec<f32>, String> {
         self.in_frame.copy_from_slice(&buffer);
         let resize_option = ResizeOptions {
             algorithm: ResizeAlg::Nearest,
@@ -46,7 +46,7 @@ impl<'a> FrameProcessor<'a> {
         };
 
         self.resizer.resize(&self.in_frame, &mut self.resized_image, &resize_option).unwrap();
-        
+
         let gray = self.rgb_to_gray_f32(
             self.resized_image.buffer(),
             self.resized_width,
@@ -93,7 +93,7 @@ mod tests {
         let buffer_input = create_buffer_input();
 
         let processed_frame = frame_processor
-            .process_frame(buffer_input.0, buffer_input.1, buffer_input.2)
+            .process_frame(buffer_input.0)
             .expect("process_frame should succeed for valid buffer");
 
         assert_eq!(
@@ -113,7 +113,7 @@ mod tests {
         let buffer_input = create_buffer_input();
 
         let processed_frame = frame_processor
-            .process_frame(buffer_input.0, buffer_input.1, buffer_input.2)
+            .process_frame(buffer_input.0)
             .expect("process_frame should succeed for valid buffer");
 
         assert!((processed_frame[0] - 0.299).abs() < 1e-6);
