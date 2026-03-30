@@ -1,6 +1,6 @@
 use rand::Rng;
 use retro_rust::environments::image_retro_env::platform::Platform;
-use retro_rust::environments::retro_env::{RetroEnvScenario};
+use retro_rust::environments::retro_env::RetroEnvScenario;
 use retro_rust::environments::vector_retro_env::VectorRetroEnv;
 
 // #[test]
@@ -21,9 +21,7 @@ use retro_rust::environments::vector_retro_env::VectorRetroEnv;
 //         // generate a random action between 0 and 125
 //         let action = rand::thread_rng().gen_range(0..126);
 //
-//         let time = Instant::now();
 //         let step_infos = image_env.step(action);
-//         dbg!(time.elapsed());
 //
 //         // check first frame for non-zero pixel
 //         let frame = &step_infos.observation;
@@ -93,19 +91,16 @@ fn run_vector_env() {
     let mut any_non_zero_reward = false;
 
     for _ in 0..500 {
-        // generate a random action between 0 and 125
         let action = rand::rng().random_range(0..126);
         let actions = vec![action; num_envs];
 
         let step_infos = vector_env.step(&actions);
 
-        // check first frame for non-zero pixel
         let frame = &step_infos[0].observation;
         if frame.iter().any(|&pixel| pixel != 0.0) {
             any_non_zero_frame = true;
         }
 
-        // check first reward for non-zero
         let reward = step_infos[0].reward;
         if reward != 0.0 {
             any_non_zero_reward = true;

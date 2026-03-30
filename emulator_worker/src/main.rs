@@ -1,4 +1,5 @@
 use std::{env, io};
+use std::fs::OpenOptions;
 use std::io::{BufRead, Stdout, Write};
 use retro_rust::environments::image_retro_env::platform::Platform;
 use retro_rust::environments::retro_env::{build_env, RetroEnvScenario};
@@ -47,6 +48,17 @@ pub fn run_worker(scenario: RetroEnvScenario) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+
+    // Open the log file in append mode
+    let mut log_file = OpenOptions::new()
+        .create(true)   // create if it doesn't exist
+        .append(true)   // append instead of overwriting
+        .open("step_info.log")
+        .expect("Cannot open log file");
+
+    // Write the observation to the file
+    writeln!(log_file, "{:?}", args)
+        .expect("Failed to write to log file");
 
     if args.len() < 5 {
         eprintln!("Usage: worker <game> <platform> <save_state> <record_movie>");

@@ -40,7 +40,7 @@ impl<'a> ImageRetroEnv<'a> {
         let start_save_state = Self::create_save_state(&game_path, save_state_name);
         // println!("✔ Save state verified");
 
-        let emulator = RustRetroEmulator::new(&platform, start_save_state);
+        let mut emulator = RustRetroEmulator::new(&platform, start_save_state);
         // println!("✔ Emulator verified");
 
         let mut rom_path = game_path.clone();

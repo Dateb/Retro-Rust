@@ -64,15 +64,18 @@ impl RustRetroEmulator {
             load_core_info(json_str_c.as_ptr());
             let retro_emulator = emulator_new();
 
-            let screen_width = emulator_get_screen_width(retro_emulator);
-            let screen_height = emulator_get_screen_height(retro_emulator);
-
-            RustRetroEmulator { retro_emulator, start_game_state, screen_width, screen_height }
+            RustRetroEmulator { retro_emulator, start_game_state, screen_width: 0, screen_height: 0 }
         }
     }
-    pub fn configure_data(&self, data: &RustRetroGameData) {
+    pub fn configure_data(&mut self, data: &RustRetroGameData) {
         unsafe {
             emulator_configure_data(self.retro_emulator, data.retro_data);
+
+            let screen_width = emulator_get_screen_width(self.retro_emulator);
+            let screen_height = emulator_get_screen_height(self.retro_emulator);
+
+            self.screen_width = screen_width;
+            self.screen_height = screen_height;
         }
     }
     pub fn step(&self) {

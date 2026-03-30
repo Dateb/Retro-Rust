@@ -103,8 +103,8 @@ mod tests {
 
     #[test]
     fn processed_frame_correct_pixel_values() {
-        let in_width = 4;
-        let in_height = 1;
+        let in_width = 2;
+        let in_height = 2;
         let resized_width = 2;
         let resized_height = 2;
         let mut frame_processor = FrameProcessor::new(in_width, in_height, resized_width, resized_height);
