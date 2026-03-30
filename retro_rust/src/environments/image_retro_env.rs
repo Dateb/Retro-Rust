@@ -7,7 +7,6 @@ pub mod platform;
 mod frame_processor;
 
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use crate::environments::image_retro_env::controller::Controller;
 use crate::environments::image_retro_env::emulator::RustRetroEmulator;
 use crate::environments::image_retro_env::frame_processor::FrameProcessor;
@@ -119,10 +118,8 @@ impl<'a> ImageRetroEnv<'a> {
             .get_screen()
             .expect("Screen not available");
 
-        let frame_result = self.frame_processor.process_frame(buffer)
-            .expect("get_screen returns valid buffer");
-
-        frame_result
+        self.frame_processor.process_frame(buffer)
+            .expect("get_screen returns valid buffer")
     }
 
     pub fn episode_reward(&self) -> f32 {
@@ -143,8 +140,7 @@ impl RetroEnv for ImageRetroEnv<'_> {
             reward += self.skipped_frame_step(button_bit_mask)
         }
 
-        let step_info = self.step_current_frame(reward);
-        step_info
+        self.step_current_frame(reward)
     }
 
     fn reset(&mut self) -> StepInfo {

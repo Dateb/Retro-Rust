@@ -47,9 +47,9 @@ impl VectorRetroEnv {
         }
     }
 
-    pub fn step(&mut self, actions: &Vec<usize>) -> Vec<StepInfo> {
-        for i in 0..self.num_envs {
-            self.send_action(i, actions[i]);
+    pub fn step(&mut self, actions: &[usize]) -> Vec<StepInfo> {
+        for (i, action) in actions.iter().enumerate() {
+            self.send_action(i, *action);
         }
         
         let mut results = Vec::with_capacity(self.num_envs);

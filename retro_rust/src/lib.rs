@@ -1,7 +1,5 @@
-use crate::environments::image_retro_env::ImageRetroEnv;
 use crate::environments::image_retro_env::platform::Platform;
 use crate::environments::retro_env::{build_env, RetroEnvScenario};
-use crate::traits::retro_env::RetroEnv;
 
 pub mod environments;
 pub mod traits;

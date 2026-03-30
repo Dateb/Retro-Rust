@@ -1,7 +1,6 @@
-use std::time::Instant;
-use fast_image_resize::{IntoImageView, PixelType, ResizeAlg, ResizeOptions, Resizer};
+use fast_image_resize::{PixelType, ResizeAlg, ResizeOptions, Resizer};
 use fast_image_resize::images::Image;
-use image::{imageops::resize, imageops::FilterType, ColorType, DynamicImage, ImageBuffer, ImageReader, Luma, Rgb, RgbImage};
+use image::{ImageBuffer, RgbImage};
 
 #[derive(Debug)]
 pub struct FrameProcessor<'a> {

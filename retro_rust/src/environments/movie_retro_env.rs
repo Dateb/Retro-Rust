@@ -41,7 +41,7 @@ impl<'a> MovieRetroEnv<'a> {
         format!("{}/movie_{}.bk2", self.movies_dir, self.movie_counter)
     }
 
-    fn step_movie(&self, button_bit_mask: &Vec<u8>) {
+    fn step_movie(&self, button_bit_mask: &[u8]) {
         for (idx, value) in button_bit_mask.iter().enumerate() {
             self.movie.set_key(idx, *value == 1);
         }
@@ -55,7 +55,7 @@ impl RetroEnv for MovieRetroEnv<'_> {
 
         let mut reward = 0.0;
         for _ in 0..self.image_env.frame_skip {
-            if self.movie_counter % self.movie_frequency == 0 {
+            if self.movie_counter.is_multiple_of(self.movie_frequency) {
                 self.step_movie(button_bit_mask);
             }
             reward += self.image_env.skipped_frame_step(button_bit_mask);
@@ -70,7 +70,7 @@ impl RetroEnv for MovieRetroEnv<'_> {
         self.movie.close();
 
         self.movie_counter += 1;
-        if self.movie_counter % self.movie_frequency == 0 {
+        if self.movie_counter.is_multiple_of(self.movie_frequency) {
             unsafe {
                 self.movie = RustRetroMovie::new(
                     &mut self.image_env.emulator,

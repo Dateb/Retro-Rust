@@ -1,6 +1,5 @@
 use std::{env, io};
 use std::io::{BufRead, Stdout, Write};
-use retro_rust::environments::image_retro_env::{emulator, ImageRetroEnv};
 use retro_rust::environments::image_retro_env::platform::Platform;
 use retro_rust::environments::retro_env::{build_env, RetroEnvScenario};
 use retro_rust::traits::retro_env::RetroEnv;
