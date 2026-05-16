@@ -29,9 +29,6 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Build emulator worker
-        run: cargo build --bin emulator_worker
-
       - name: Generate coverage
         run: cargo llvm-cov --all-features --workspace --tests --lcov --output-path lcov.info
 
