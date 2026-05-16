@@ -8,7 +8,7 @@ fn create_image_env() {
         "Airstriker",
         Platform::Genesis,
         "Level1.state",
-        false
+        true
     );
 
     let mut image_env = build_env(scenario);
@@ -43,23 +43,6 @@ fn create_image_env() {
     assert!(any_non_zero_frame, "All of the first 500 frames were completely zero");
     assert!(any_non_zero_reward, "All of the first 500 rewards were zero");
 }
-
-// #[test]
-// fn create_movie_env() {
-//     let scenario = RetroEnvScenario::new(
-//         "Airstriker",
-//         Platform::Genesis,
-//         "Level1.state",
-//         true
-//     );
-//
-//     let mut movie_env = build_env(scenario);
-//
-//     let action = 0;
-//     movie_env.step(action);
-//
-//     movie_env.reset();
-// }
 
 // #[test]
 // fn run_vector_env() {
