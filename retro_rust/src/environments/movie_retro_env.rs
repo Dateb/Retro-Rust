@@ -1,0 +1,90 @@
+use std::fs;
+use std::path::Path;
+use crate::environments::image_retro_env::ImageRetroEnv;
+use crate::environments::movie_retro_env::movie::RustRetroMovie;
+use crate::traits::retro_env::{RetroEnv, StepInfo};
+
+pub mod movie;
+
+pub struct MovieRetroEnv<'a> {
+    image_env: Box<ImageRetroEnv<'a>>,
+    movie: RustRetroMovie,
+    movies_dir: &'static str,
+    movie_counter: u16,
+    movie_frequency: u16
+}
+
+impl<'a> MovieRetroEnv<'a> {
+    pub fn new(mut image_env: Box<ImageRetroEnv<'a>>) -> Self {
+        let movie_frequency = 10;
+        
+        let movies_dir = "movies";
+        let movies_path = Path::new(movies_dir);
+        if !movies_path.exists() { fs::create_dir(movies_path).expect("Cannot create movies dir") }
+
+        let movie_counter = 1u16;
+
+        let movie_path = format!("{}/movie_{}.bk2", movies_dir, movie_counter);
+        
+        unsafe {
+            let movie = RustRetroMovie::new(
+                &mut image_env.emulator,
+                movie_path,
+                format!("{}-Genesis", image_env.game_name.clone())
+            );
+
+            Self { image_env, movie, movies_dir, movie_counter, movie_frequency }
+        }
+    }
+
+    fn next_movie_path(&mut self) -> String {
+        format!("{}/movie_{}.bk2", self.movies_dir, self.movie_counter)
+    }
+
+    fn step_movie(&self, button_bit_mask: &[u8]) {
+        for (idx, value) in button_bit_mask.iter().enumerate() {
+            self.movie.set_key(idx, *value == 1);
+        }
+        self.movie.step();
+    }
+}
+
+impl RetroEnv for MovieRetroEnv<'_> {
+    fn step(&mut self, action: usize) -> StepInfo {
+        let button_bit_mask = self.image_env.get_button_bitmask(action);
+
+        let mut reward = 0.0;
+        for _ in 0..self.image_env.frame_skip {
+            if self.movie_counter.is_multiple_of(self.movie_frequency) {
+                self.step_movie(button_bit_mask);
+            }
+            reward += self.image_env.skipped_frame_step(button_bit_mask);
+        }
+
+        self.image_env.step_current_frame(reward)
+    }
+
+    fn reset(&mut self) -> StepInfo {
+        let step_info = self.image_env.reset();
+
+        self.movie.close();
+
+        self.movie_counter += 1;
+        if self.movie_counter.is_multiple_of(self.movie_frequency) {
+            unsafe {
+                self.movie = RustRetroMovie::new(
+                    &mut self.image_env.emulator,
+                    self.next_movie_path(),
+                    format!("{}-Genesis", self.image_env.game_name.clone())
+                );
+            }
+            self.movie.step();
+        }
+
+        step_info
+    }
+
+    fn num_actions(&self) -> usize {
+        self.image_env.num_actions()
+    }
+}

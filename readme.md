@@ -23,10 +23,19 @@
 <ul style="list-style: none; padding-left: 0;">
   <li>Designed for native Rust ML workflows:</li>
   <ul style="list-style: none; padding-left: 1em;">
-    <li>➜ Ultra-fast training loops</li>
-    <li>➜ Zero Python/C++ bindings</li>
+    <li> Ultra-fast training loops</li>
+    <li> Zero Python/C++ bindings</li>
   </ul>
 </ul>
+
+## Installation
+
+Run the following command to install the required dependencies:
+
+```bash
+sudo apt install build-essential cmake zlib1g-dev libbz2-dev liblua5.1-0-dev
+```
+
 
 ## Getting started
 
@@ -79,7 +88,7 @@ Here is how to use other games\*:
 
 ---
 
-\* This process will be made easier in the future.
+\* For more information please look at the [Game Integration Documentation](https://retro.readthedocs.io/en/latest/integration.html) from Gym Retro.
 
 ## Environment structure
 
@@ -91,41 +100,12 @@ These are the basic building blocks of retro-rust environments:
 | Action      | `usize`    | Controller button combination encoded as a discrete action | 
 | Observation | `Vec<f32>` | Normalized grayscale values of game image                  |
 
-## Benchmark
+## Performance
 
-The figure below shows the runtime behavior during training:
+Environment stepping and parallel execution performance are competitive with
+existing Python implementations such as the [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3) library.
 
-<figure>
-  <img src="images/benchmark.png" alt="Distribution plot">
-  <figcaption>
-    Wall clock time against return for DQN training in Python and Rust on Airstriker-Genesis. 
-    The return is approximated by averaging the last 100 episodic rewards.
-  </figcaption>
-</figure>
+| Parallel Environments  |  Frame Skip  |  Rust FPS  |  Python FPS  |
+|:----------------------:|:------------:|:----------:|:------------:|
+|           8            |      4       |   ~5755    |    ~5530     |
 
-For fair comparisons, hyperparameters are replicated across both runs. These are the following:
-
-### Benchmark setup
-
-| Hyperparameter            | Value     |
-|---------------------------|-----------|
-| Replay Buffer size        | `100.000` |
-| Learning starts at sample | `10.000`  |
-| Target update frequency   | `5.000`   |
-| N steps per train         | `4`       |
-| Discount factor           | `0.99`    |
-| Batch size                | `128`     |
-| Optimizer                 | `Adam`    |
-| Learning rate             | `1e-4`    |
-| Number of stacked frames  | `4`       |
-| Number of skipped frames  | `4`       |
-
-Network architecture: Standard DQN with CNN, see [Mnih et al., 2015](https://arxiv.org/abs/1312.5602)
-
-## What's next
-
-These are upcoming changes:
-
-- Improving the ROM setup experience
-- Vectorized environment support with parallelization
-- Further bug-fixing/testing
